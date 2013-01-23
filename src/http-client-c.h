@@ -92,6 +92,7 @@ int is_scheme_char(int c)
 */
 struct parsed_url *parse_url(const char *url)
 {
+	
 	/* Define variable */
     struct parsed_url *purl;
     const char *tmpstr;
@@ -127,19 +128,21 @@ struct parsed_url *parse_url(const char *url)
     tmpstr = strchr(curstr, ':');
     if ( NULL == tmpstr ) 
 	{
-        /* Not found the character */
-        parsed_url_free(purl);
+        parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
+		
         return NULL;
     }
+
     /* Get the scheme length */
     len = tmpstr - curstr;
+
     /* Check restrictions */
     for ( i = 0; i < len; i++ ) 
 	{
         if (is_scheme_char(curstr[i]) == 0) 
 		{
             /* Invalid format */
-            parsed_url_free(purl);
+            parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
     }
@@ -147,16 +150,20 @@ struct parsed_url *parse_url(const char *url)
     purl->scheme = malloc(sizeof(char) * (len + 1));
     if ( NULL == purl->scheme ) 
 	{
-        parsed_url_free(purl);
+        parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
+		
         return NULL;
     }
+
     (void)strncpy(purl->scheme, curstr, len);
     purl->scheme[len] = '\0';
+
     /* Make the character to lower if it is upper case. */
     for ( i = 0; i < len; i++ ) 
 	{
         purl->scheme[i] = tolower(purl->scheme[i]);
     }
+
     /* Skip ':' */
     tmpstr++;
     curstr = tmpstr;
@@ -170,7 +177,7 @@ struct parsed_url *parse_url(const char *url)
 	{
         if ( '/' != *curstr ) 
 		{
-            parsed_url_free(purl);
+            parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
         curstr++;
@@ -209,7 +216,7 @@ struct parsed_url *parse_url(const char *url)
         purl->username = malloc(sizeof(char) * (len + 1));
         if ( NULL == purl->username ) 
 		{
-            parsed_url_free(purl);
+            parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
         (void)strncpy(purl->username, curstr, len);
@@ -230,7 +237,7 @@ struct parsed_url *parse_url(const char *url)
             purl->password = malloc(sizeof(char) * (len + 1));
             if ( NULL == purl->password ) 
 			{
-                parsed_url_free(purl);
+                parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
                 return NULL;
             }
             (void)strncpy(purl->password, curstr, len);
@@ -240,7 +247,7 @@ struct parsed_url *parse_url(const char *url)
         /* Skip '@' */
         if ( '@' != *curstr ) 
 		{
-            parsed_url_free(purl);
+            parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
         curstr++;
@@ -274,7 +281,7 @@ struct parsed_url *parse_url(const char *url)
     purl->host = malloc(sizeof(char) * (len + 1));
     if ( NULL == purl->host || len <= 0 ) 
 	{
-        parsed_url_free(purl);
+        parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
         return NULL;
     }
     (void)strncpy(purl->host, curstr, len);
@@ -295,7 +302,7 @@ struct parsed_url *parse_url(const char *url)
         purl->port = malloc(sizeof(char) * (len + 1));
         if ( NULL == purl->port ) 
 		{
-            parsed_url_free(purl);
+            parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
         (void)strncpy(purl->port, curstr, len);
@@ -323,7 +330,7 @@ struct parsed_url *parse_url(const char *url)
     /* Skip '/' */
     if ( '/' != *curstr ) 
 	{
-        parsed_url_free(purl);
+        parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
         return NULL;
     }
     curstr++;
@@ -338,7 +345,7 @@ struct parsed_url *parse_url(const char *url)
     purl->path = malloc(sizeof(char) * (len + 1));
     if ( NULL == purl->path ) 
 	{
-        parsed_url_free(purl);
+        parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
         return NULL;
     }
     (void)strncpy(purl->path, curstr, len);
@@ -360,7 +367,7 @@ struct parsed_url *parse_url(const char *url)
         purl->query = malloc(sizeof(char) * (len + 1));
         if ( NULL == purl->query ) 
 		{
-            parsed_url_free(purl);
+            parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
         (void)strncpy(purl->query, curstr, len);
@@ -383,7 +390,7 @@ struct parsed_url *parse_url(const char *url)
         purl->fragment = malloc(sizeof(char) * (len + 1));
         if ( NULL == purl->fragment )
  		{
-            parsed_url_free(purl);
+            parsed_url_free(purl); fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
         (void)strncpy(purl->fragment, curstr, len);
@@ -504,7 +511,6 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	response = realloc(response, strlen(response) + 1);
 
 	// Free
-	free(http_headers);
 	close(sock);
 	
 	/* Parse status code and text */
@@ -576,6 +582,29 @@ struct http_response* http_get(char *url, char *custom_headers)
 			sprintf(http_headers, "GET / HTTP/1.1\r\nHost:%s\r\nConnection:close\r\n", purl->host);
 		}
 	}
+	
+	/* Handle authorisation if needed */
+	if(purl->username != NULL)
+	{
+		/* Format username:password pair */
+		char *upwd = malloc(1024);
+		sprintf(upwd, "%s:%s", purl->username, purl->password);
+		upwd = realloc(upwd, strlen(upwd) + 1);
+		
+		/* Base64 encode */
+		char *base64 = base64_encode(upwd);
+		
+		/* Form header */
+		char *auth_header = malloc(1024);
+		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
+		auth_header = realloc(auth_header, strlen(auth_header) + 1);
+		
+		/* Add to header */
+		http_headers = realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
+		sprintf(http_headers, "%s%s", http_headers, auth_header);
+	}
+	
+	/* Add custom headers, and close */
 	if(custom_headers != NULL)
 	{
 		sprintf(http_headers, "%s%s\r\n", http_headers, custom_headers);
@@ -646,6 +675,28 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 			sprintf(http_headers, "POST / HTTP/1.1\r\nHost:%s\r\nConnection:close\r\nContent-Length:%zu\r\nContent-Type:application/x-www-form-urlencoded\r\n", purl->host, strlen(post_data));
 		}
 	}
+	
+	/* Handle authorisation if needed */
+	if(purl->username != NULL)
+	{
+		/* Format username:password pair */
+		char *upwd = malloc(1024);
+		sprintf(upwd, "%s:%s", purl->username, purl->password);
+		upwd = realloc(upwd, strlen(upwd) + 1);
+		
+		/* Base64 encode */
+		char *base64 = base64_encode(upwd);
+		
+		/* Form header */
+		char *auth_header = malloc(1024);
+		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
+		auth_header = realloc(auth_header, strlen(auth_header) + 1);
+		
+		/* Add to header */
+		http_headers = realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
+		sprintf(http_headers, "%s%s", http_headers, auth_header);
+	}
+	
 	if(custom_headers != NULL)
 	{
 		sprintf(http_headers, "%s%s\r\n", http_headers, custom_headers);
@@ -716,6 +767,28 @@ struct http_response* http_head(char *url, char *custom_headers)
 			sprintf(http_headers, "HEAD / HTTP/1.1\r\nHost:%s\r\nConnection:close\r\n", purl->host);
 		}
 	}
+	
+	/* Handle authorisation if needed */
+	if(purl->username != NULL)
+	{
+		/* Format username:password pair */
+		char *upwd = malloc(1024);
+		sprintf(upwd, "%s:%s", purl->username, purl->password);
+		upwd = realloc(upwd, strlen(upwd) + 1);
+		
+		/* Base64 encode */
+		char *base64 = base64_encode(upwd);
+		
+		/* Form header */
+		char *auth_header = malloc(1024);
+		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
+		auth_header = realloc(auth_header, strlen(auth_header) + 1);
+		
+		/* Add to header */
+		http_headers = realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
+		sprintf(http_headers, "%s%s", http_headers, auth_header);
+	}
+	
 	if(custom_headers != NULL)
 	{
 		sprintf(http_headers, "%s%s\r\n", http_headers, custom_headers);

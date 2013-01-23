@@ -19,3 +19,11 @@
 .DS_Store
 
 src/.DS_Store
+
+src/test
+
+src/test.c
+
+src/test.dSYM/Contents/Info.plist
+
+src/test.dSYM/Contents/Resources/DWARF/test
