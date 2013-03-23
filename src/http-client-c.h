@@ -50,13 +50,6 @@ struct http_response
 	char *response_headers;
 };
 
-/*
-	Check whether the character is permitted in scheme string
-*/
-int is_scheme_char(int c)
-{
-    return (!isalpha(c) && '+' != c && '-' != c && '.' != c) ? 0 : 1;
-}
 
 /*
 	Makes a HTTP request and returns the response
@@ -77,7 +70,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	struct sockaddr_in *remote;
 	
 	/* Allocate memeory for htmlcontent */
-	struct http_response *hresp = malloc(sizeof(struct http_response));
+	struct http_response *hresp = (struct http_response*)malloc(sizeof(struct http_response));
 	if(hresp == NULL)
 	{
 		herror("Unable to allocate memory for htmlcontent.");
@@ -133,13 +126,13 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	 }
 	
 	/* Recieve into response*/
-	char *response = malloc(0);
+	char *response = (char*)malloc(0);
 	char BUF[BUFSIZ];
 	size_t recived_len = 0;
 	while((recived_len = recv(sock, BUF, BUFSIZ-1, 0)) > 0)
 	{
         BUF[recived_len] = '\0';
-		response = realloc(response, strlen(response) + strlen(BUF) + 1);
+		response = (char*)realloc(response, strlen(response) + strlen(BUF) + 1);
 		sprintf(response, "%s%s", response, BUF);
 	}
 	if (recived_len < 0)
@@ -151,7 +144,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
     }
 	
 	/* Reallocate response */
-	response = realloc(response, strlen(response) + 1);
+	response = (char*)realloc(response, strlen(response) + 1);
 
 	// Free
 	close(sock);
@@ -200,7 +193,7 @@ struct http_response* http_get(char *url, char *custom_headers)
 	}
 	
 	/* Declare variable */
-	char *http_headers = malloc(1024);
+	char *http_headers = (char*)malloc(1024);
 	
 	/* Build query/headers */
 	if(purl->path != NULL)
@@ -230,20 +223,20 @@ struct http_response* http_get(char *url, char *custom_headers)
 	if(purl->username != NULL)
 	{
 		/* Format username:password pair */
-		char *upwd = malloc(1024);
+		char *upwd = (char*)malloc(1024);
 		sprintf(upwd, "%s:%s", purl->username, purl->password);
-		upwd = realloc(upwd, strlen(upwd) + 1);
+		upwd = (char*)realloc(upwd, strlen(upwd) + 1);
 		
 		/* Base64 encode */
 		char *base64 = base64_encode(upwd);
 		
 		/* Form header */
-		char *auth_header = malloc(1024);
+		char *auth_header = (char*)malloc(1024);
 		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
-		auth_header = realloc(auth_header, strlen(auth_header) + 1);
+		auth_header = (char*)realloc(auth_header, strlen(auth_header) + 1);
 		
 		/* Add to header */
-		http_headers = realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
+		http_headers = (char*)realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
 		sprintf(http_headers, "%s%s", http_headers, auth_header);
 	}
 	
@@ -256,7 +249,7 @@ struct http_response* http_get(char *url, char *custom_headers)
 	{
 		sprintf(http_headers, "%s\r\n", http_headers);
 	}
-	http_headers = realloc(http_headers, strlen(http_headers) + 1);
+	http_headers = (char*)realloc(http_headers, strlen(http_headers) + 1);
 	
 	/* Make request and return response */
 	struct http_response *hresp = http_req(http_headers, purl);
@@ -293,7 +286,7 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 	}
 	
 	/* Declare variable */
-	char *http_headers = malloc(1024);
+	char *http_headers = (char*)malloc(1024);
 
 	/* Build query/headers */
 	if(purl->path != NULL)
@@ -323,20 +316,20 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 	if(purl->username != NULL)
 	{
 		/* Format username:password pair */
-		char *upwd = malloc(1024);
+		char *upwd = (char*)malloc(1024);
 		sprintf(upwd, "%s:%s", purl->username, purl->password);
-		upwd = realloc(upwd, strlen(upwd) + 1);
+		upwd = (char*)realloc(upwd, strlen(upwd) + 1);
 		
 		/* Base64 encode */
 		char *base64 = base64_encode(upwd);
 		
 		/* Form header */
-		char *auth_header = malloc(1024);
+		char *auth_header = (char*)malloc(1024);
 		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
-		auth_header = realloc(auth_header, strlen(auth_header) + 1);
+		auth_header = (char*)realloc(auth_header, strlen(auth_header) + 1);
 		
 		/* Add to header */
-		http_headers = realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
+		http_headers = (char*)realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
 		sprintf(http_headers, "%s%s", http_headers, auth_header);
 	}
 	
@@ -348,7 +341,7 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 	{
 		sprintf(http_headers, "%s\r\n%s", http_headers, post_data);
 	}
-	http_headers = realloc(http_headers, strlen(http_headers) + 1);
+	http_headers = (char*)realloc(http_headers, strlen(http_headers) + 1);
 	
 	/* Make request and return response */
 	struct http_response *hresp = http_req(http_headers, purl);
@@ -385,7 +378,7 @@ struct http_response* http_head(char *url, char *custom_headers)
 	}
 	
 	/* Declare variable */
-	char *http_headers = malloc(1024);
+	char *http_headers = (char*)malloc(1024);
 	
 	/* Build query/headers */
 	if(purl->path != NULL)
@@ -415,20 +408,20 @@ struct http_response* http_head(char *url, char *custom_headers)
 	if(purl->username != NULL)
 	{
 		/* Format username:password pair */
-		char *upwd = malloc(1024);
+		char *upwd = (char*)malloc(1024);
 		sprintf(upwd, "%s:%s", purl->username, purl->password);
-		upwd = realloc(upwd, strlen(upwd) + 1);
+		upwd = (char*)realloc(upwd, strlen(upwd) + 1);
 		
 		/* Base64 encode */
 		char *base64 = base64_encode(upwd);
 		
 		/* Form header */
-		char *auth_header = malloc(1024);
+		char *auth_header = (char*)malloc(1024);
 		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
-		auth_header = realloc(auth_header, strlen(auth_header) + 1);
+		auth_header = (char*)realloc(auth_header, strlen(auth_header) + 1);
 		
 		/* Add to header */
-		http_headers = realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
+		http_headers = (char*)realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
 		sprintf(http_headers, "%s%s", http_headers, auth_header);
 	}
 	
@@ -440,7 +433,7 @@ struct http_response* http_head(char *url, char *custom_headers)
 	{
 		sprintf(http_headers, "%s\r\n", http_headers);
 	}
-	http_headers = realloc(http_headers, strlen(http_headers) + 1);
+	http_headers = (char*)realloc(http_headers, strlen(http_headers) + 1);
 	
 	/* Make request and return response */
 	struct http_response *hresp = http_req(http_headers, purl);

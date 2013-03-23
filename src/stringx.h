@@ -29,6 +29,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+	#include <locale>
+#endif
+
 /*
 	Gets the offset of one string in another string
 */
@@ -73,7 +77,7 @@ char* trim_end(char *string, char to_trim)
 */
 char* str_cat(char *a, char *b)
 {
-	char *target = malloc(strlen(a) + strlen(b) + 1);
+	char *target = (char*)malloc(strlen(a) + strlen(b) + 1);
 	strcpy(target, a);
 	strcat(target, b);
 	return target;
@@ -93,7 +97,7 @@ char to_hex(char code)
 */
 char *urlencode(char *str) 
 {
-	char *pstr = str, *buf = malloc(strlen(str) * 3 + 1), *pbuf = buf;
+	char *pstr = str, *buf = (char*)malloc(strlen(str) * 3 + 1), *pbuf = buf;
   	while (*pstr) 
 	{
     	if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~') 
@@ -114,7 +118,7 @@ char *urlencode(char *str)
 char *str_ndup (const char *str, size_t max)
 {
     size_t len = strnlen (str, max);
-    char *res = malloc (len + 1);
+    char *res = (char*)malloc (len + 1);
     if (res)
     {
         memcpy (res, str, len);
@@ -128,7 +132,7 @@ char *str_ndup (const char *str, size_t max)
 */
 char *str_dup(const char *src)
 {
-   char *tmp = malloc(strlen(src) + 1);
+   char *tmp = (char*)malloc(strlen(src) + 1);
    if(tmp)
        strcpy(tmp, src);
    return tmp;
@@ -147,7 +151,7 @@ char *str_replace(char *search , char *replace , char *subject)
 		c++;
 	}	
 	c = ( strlen(replace) - search_size )*c + strlen(subject);
-	new_subject = malloc( c );
+	new_subject = (char*)malloc( c );
 	strcpy(new_subject , "");
 	old = subject;	
 	for(p = strstr(subject , search) ; p != NULL ; p = strstr(p + search_size , search))
@@ -178,7 +182,7 @@ void decodeblock(unsigned char in[], char *clrstr)
 	out[1] = in[1] << 4 | in[2] >> 2;
 	out[2] = in[2] << 6 | in[3] >> 0;
 	out[3] = '\0';
-	strncat(clrstr, out, sizeof(out));
+	strncat((char *)clrstr, (char *)out, sizeof(out));
 }
 
 /*
@@ -186,7 +190,7 @@ void decodeblock(unsigned char in[], char *clrstr)
 */
 char* base64_decode(char *b64src) 
 {
-	char *clrdst = malloc( ((strlen(b64src) - 1) / 3 ) * 4 + 4 + 50);
+	char *clrdst = (char*)malloc( ((strlen(b64src) - 1) / 3 ) * 4 + 4 + 50);
 	char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	int c, phase, i;
 	unsigned char in[4];
@@ -214,7 +218,7 @@ char* base64_decode(char *b64src)
 		}
 		i++;
 	}
-	clrdst = realloc(clrdst, strlen(clrdst) + 1);
+	clrdst = (char*)realloc(clrdst, strlen(clrdst) + 1);
 	return clrdst;
 }
 
@@ -229,7 +233,7 @@ void encodeblock( unsigned char in[], char b64str[], int len )
              ((in[2] & 0xc0) >> 6) ] : '=');
     out[3] = (unsigned char) (len > 2 ? b64[ in[2] & 0x3f ] : '=');
     out[4] = '\0';
-    strncat(b64str, out, sizeof(out));
+    strncat((char *)b64str, (char *)out, sizeof(out));
 }
 
 /* 
@@ -237,7 +241,7 @@ void encodeblock( unsigned char in[], char b64str[], int len )
 */
 char* base64_encode(char *clrstr) 
 {
-	char *b64dst = malloc(strlen(clrstr) + 50);
+	char *b64dst = (char*)malloc(strlen(clrstr) + 50);
 	char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	unsigned char in[3];
 	int i, len = 0;
@@ -261,6 +265,6 @@ char* base64_encode(char *clrstr)
 			encodeblock( in, b64dst, len );
 		}
 	}
-	b64dst = realloc(b64dst, strlen(b64dst) + 1);
+	b64dst = (char*)realloc(b64dst, strlen(b64dst) + 1);
 	return b64dst;
 }
