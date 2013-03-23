@@ -4,7 +4,9 @@ http-client-c
 =============
 
 A quick and dirty HTTP client library in and for C. The intention of http-client-c is to write an easy-to-use HTTP client in and for C.
-Usage should be easy without hassle but still advanced and easy to control.
+Usage should be easy without hassle but still advanced and easy to control. http-client-c is almost fully comliant with the HTTP 1.1 standards.
+http-client-c's code has been optimized to compile perfectly with all known C and C++ compilers. Altough the code is written
+in C, it can be used in C++ code as well.
 
 Basic Usage
 ===============
