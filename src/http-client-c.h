@@ -37,6 +37,15 @@
 #include "urlparser.h"
 
 /*
+	Prototype functions
+*/
+struct http_response* http_req(char *http_headers, struct parsed_url *purl);
+struct http_response* http_get(char *url, char *custom_headers);
+struct http_response* http_head(char *url, char *custom_headers);
+struct http_response* http_post(char *url, char *custom_headers, char *post_data);
+
+
+/*
 	Represents an HTTP html response
 */
 struct http_response
@@ -50,6 +59,83 @@ struct http_response
 	char *response_headers;
 };
 
+/*
+	Handles redirect if needed for get requests
+*/
+struct http_response* handle_redirect_get(struct http_response* hresp, char* custom_headers)
+{
+	if(hresp->status_code_int > 300 && hresp->status_code_int < 399)
+	{
+		char *token = strtok(hresp->response_headers, "\r\n");
+		while(token != NULL)
+		{
+			if(str_contains(token, "Location:"))
+			{
+				/* Extract url */
+				char *location = str_replace("Location: ", "", token);
+				return http_get(location, custom_headers);
+			}
+			token = strtok(NULL, "\r\n");
+		}
+	}
+	else
+	{
+		/* We're not dealing with a redirect, just return the same structure */
+		return hresp;
+	}
+}
+
+/*
+	Handles redirect if needed for head requests
+*/
+struct http_response* handle_redirect_head(struct http_response* hresp, char* custom_headers)
+{
+	if(hresp->status_code_int > 300 && hresp->status_code_int < 399)
+	{
+		char *token = strtok(hresp->response_headers, "\r\n");
+		while(token != NULL)
+		{
+			if(str_contains(token, "Location:"))
+			{
+				/* Extract url */
+				char *location = str_replace("Location: ", "", token);
+				return http_head(location, custom_headers);
+			}
+			token = strtok(NULL, "\r\n");
+		}
+	}
+	else
+	{
+		/* We're not dealing with a redirect, just return the same structure */
+		return hresp;
+	}
+}
+
+/*
+	Handles redirect if needed for post requests
+*/
+struct http_response* handle_redirect_post(struct http_response* hresp, char* custom_headers, char *post_data)
+{
+	if(hresp->status_code_int > 300 && hresp->status_code_int < 399)
+	{
+		char *token = strtok(hresp->response_headers, "\r\n");
+		while(token != NULL)
+		{
+			if(str_contains(token, "Location:"))
+			{
+				/* Extract url */
+				char *location = str_replace("Location: ", "", token);
+				return http_post(location, custom_headers, post_data);
+			}
+			token = strtok(NULL, "\r\n");
+		}
+	}
+	else
+	{
+		/* We're not dealing with a redirect, just return the same structure */
+		return hresp;
+	}
+}
 
 /*
 	Makes a HTTP request and returns the response
@@ -255,21 +341,7 @@ struct http_response* http_get(char *url, char *custom_headers)
 	struct http_response *hresp = http_req(http_headers, purl);
 	
 	/* Handle redirect */
-	if(hresp->status_code_int > 300 && hresp->status_code_int < 399)
-	{
-		char *token = strtok(hresp->response_headers, "\r\n");
-		while(token != NULL)
-		{
-			if(str_contains(token, "Location:"))
-			{
-				/* Extract url */
-				char *location = str_replace("Location: ", "", token);
-				return http_get(location, custom_headers);
-			}
-			token = strtok(NULL, "\r\n");
-		}
-	}
-	return hresp;
+	return handle_redirect_get(hresp, custom_headers);
 }
 
 /*
@@ -347,21 +419,7 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 	struct http_response *hresp = http_req(http_headers, purl);
 	
 	/* Handle redirect */
-	if(hresp->status_code_int > 300 && hresp->status_code_int < 399)
-	{
-		char *token = strtok(hresp->response_headers, "\r\n");
-		while(token != NULL)
-		{
-			if(str_contains(token, "Location:"))
-			{
-				/* Extract url */
-				char *location = str_replace("Location: ", "", token);
-				return http_post(location, custom_headers, post_data);
-			}
-			token = strtok(NULL, "\r\n");
-		}
-	}
-	return hresp;
+	return handle_redirect_post(hresp, custom_headers, post_data);
 }
 
 /*
@@ -439,21 +497,7 @@ struct http_response* http_head(char *url, char *custom_headers)
 	struct http_response *hresp = http_req(http_headers, purl);
 	
 	/* Handle redirect */
-	if(hresp->status_code_int > 300 && hresp->status_code_int < 399)
-	{
-		char *token = strtok(hresp->response_headers, "\r\n");
-		while(token != NULL)
-		{
-			if(str_contains(token, "Location:"))
-			{
-				/* Extract url */
-				char *location = str_replace("Location: ", "", token);
-				return http_head(location, custom_headers);
-			}
-			token = strtok(NULL, "\r\n");
-		}
-	}
-	return hresp;
+	return handle_redirect_head(hresp, custom_headers);
 }
 
 /*
