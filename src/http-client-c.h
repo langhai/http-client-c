@@ -30,10 +30,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <sys/socket.h>
+#ifdef _WIN32
+	#include <winsock2.h>
+	#include <ws2tcpip.h>
+	#include <stdio.h>
+	#pragma comment(lib, "Ws2_32.lib")
+#elif _LINUX
+	#include <sys/socket.h>
+#else
+	#error Platform not suppoted.
+#endif
+
 #include <errno.h> 
-#include <netdb.h>	
-#include <arpa/inet.h>
 #include "stringx.h";
 #include "urlparser.h"
 
@@ -146,7 +154,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	/* Parse url */
 	if(purl == NULL)
 	{
-		herror("Unable to parse url");
+		printf("Unable to parse url");
 		return NULL;
 	}
 	
@@ -160,7 +168,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	struct http_response *hresp = (struct http_response*)malloc(sizeof(struct http_response));
 	if(hresp == NULL)
 	{
-		herror("Unable to allocate memory for htmlcontent.");
+		printf("Unable to allocate memory for htmlcontent.");
 		return NULL;
 	}
 	hresp->body = NULL;
@@ -172,7 +180,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	/* Create TCP socket */
 	if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
 	{
-	    herror("Can't create TCP socket");
+	    printf("Can't create TCP socket");
 		return NULL;
 	}
 	
@@ -182,12 +190,12 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
   	tmpres = inet_pton(AF_INET, purl->ip, (void *)(&(remote->sin_addr.s_addr)));
   	if( tmpres < 0)  
   	{
-    	herror("Can't set remote->sin_addr.s_addr");
+    	printf("Can't set remote->sin_addr.s_addr");
     	return NULL;
   	}
 	else if(tmpres == 0)
   	{
-		herror("Not a valid IP");
+		printf("Not a valid IP");
     	return NULL;
   	}
 	remote->sin_port = htons(atoi(purl->port));
@@ -195,7 +203,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	/* Connect */
 	if(connect(sock, (struct sockaddr *)remote, sizeof(struct sockaddr)) < 0)
 	{
-	    herror("Could not connect");
+	    printf("Could not connect");
 		return NULL;
 	}
 	
@@ -206,7 +214,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	    tmpres = send(sock, http_headers+sent, strlen(http_headers)-sent, 0);
 		if(tmpres == -1)
 		{
-			herror("Can't send headers");
+			printf("Can't send headers");
 			return NULL;
 		}
 		sent += tmpres;
@@ -225,16 +233,24 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	if (recived_len < 0)
     {
 		free(http_headers);
-		close(sock);
-        herror("Unabel to recieve");
+		#ifdef _WIN32
+			closesocket(sock);
+		#else
+			close(sock);
+		#endif
+        printf("Unabel to recieve");
 		return NULL;
     }
 	
 	/* Reallocate response */
 	response = (char*)realloc(response, strlen(response) + 1);
 
-	// Free
-	close(sock);
+	/* Close socket */
+	#ifdef _WIN32
+		closesocket(sock);
+	#else
+		close(sock);
+	#endif
 	
 	/* Parse status code and text */
 	char *status_line = get_until(response, "\r\n");
@@ -275,7 +291,7 @@ struct http_response* http_get(char *url, char *custom_headers)
 	struct parsed_url *purl = parse_url(url);
 	if(purl == NULL)
 	{
-		herror("Unable to parse url");
+		printf("Unable to parse url");
 		return NULL;
 	}
 	
@@ -354,7 +370,7 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 	struct parsed_url *purl = parse_url(url);
 	if(purl == NULL)
 	{
-		herror("Unable to parse url");
+		printf("Unable to parse url");
 		return NULL;
 	}
 	
@@ -432,7 +448,7 @@ struct http_response* http_head(char *url, char *custom_headers)
 	struct parsed_url *purl = parse_url(url);
 	if(purl == NULL)
 	{
-		herror("Unable to parse url");
+		printf("Unable to parse url");
 		return NULL;
 	}
 	
@@ -510,7 +526,7 @@ struct http_response* http_options(char *url)
 	struct parsed_url *purl = parse_url(url);
 	if(purl == NULL)
 	{
-		herror("Unable to parse url");
+		printf("Unable to parse url");
 		return NULL;
 	}
 	

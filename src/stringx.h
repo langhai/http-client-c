@@ -38,7 +38,7 @@
 */
 int str_index_of(const char *a, char *b)
 {
-	char *offset = strstr(a, b);
+	char *offset = (char*)strstr(a, b);
 	return offset - a;
 }
 
@@ -47,7 +47,7 @@ int str_index_of(const char *a, char *b)
 */
 int str_contains(const char *haystack, const char *needle)
 {
-	char *pos = strstr(haystack, needle);
+	char *pos = (char*)strstr(haystack, needle);
 	if(pos)
 		return 1;
 	else
