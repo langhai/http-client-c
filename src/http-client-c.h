@@ -430,6 +430,7 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 	if(custom_headers != NULL)
 	{
 		sprintf(http_headers, "%s%s\r\n", http_headers, custom_headers);
+		sprintf(http_headers, "%s\r\n%s", http_headers, post_data);
 	}
 	else
 	{
