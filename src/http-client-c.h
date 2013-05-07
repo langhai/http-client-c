@@ -1,7 +1,7 @@
 /*
-	http-client-c 
+	http-client-c
 	Copyright (C) 2012-2013  Swen Kooij
-	
+
 	This file is part of http-client-c.
 
     http-client-c is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 	This library does not tend to work that stable nor does it fully implent the
 	standards described by IETF. For more information on the precise implentation of the
 	Hyper Text Transfer Protocol:
-	
+
 	http://www.ietf.org/rfc/rfc2616.txt
 */
 
@@ -37,11 +37,16 @@
 	#pragma comment(lib, "Ws2_32.lib")
 #elif _LINUX
 	#include <sys/socket.h>
+#elif __FreeBSD__
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+    #include <arpa/inet.h>
 #else
 	#error Platform not suppoted.
 #endif
 
-#include <errno.h> 
+#include <errno.h>
 #include "stringx.h";
 #include "urlparser.h"
 
@@ -157,13 +162,13 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 		printf("Unable to parse url");
 		return NULL;
 	}
-	
+
 	/* Declare variable */
 	int sock;
 	int tmpres;
 	char buf[BUFSIZ+1];
 	struct sockaddr_in *remote;
-	
+
 	/* Allocate memeory for htmlcontent */
 	struct http_response *hresp = (struct http_response*)malloc(sizeof(struct http_response));
 	if(hresp == NULL)
@@ -176,19 +181,19 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	hresp->response_headers = NULL;
 	hresp->status_code = NULL;
 	hresp->status_text = NULL;
-	
+
 	/* Create TCP socket */
 	if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
 	{
 	    printf("Can't create TCP socket");
 		return NULL;
 	}
-	
+
 	/* Set remote->sin_addr.s_addr */
 	remote = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in *));
 	remote->sin_family = AF_INET;
   	tmpres = inet_pton(AF_INET, purl->ip, (void *)(&(remote->sin_addr.s_addr)));
-  	if( tmpres < 0)  
+  	if( tmpres < 0)
   	{
     	printf("Can't set remote->sin_addr.s_addr");
     	return NULL;
@@ -199,14 +204,14 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
     	return NULL;
   	}
 	remote->sin_port = htons(atoi(purl->port));
-	
+
 	/* Connect */
 	if(connect(sock, (struct sockaddr *)remote, sizeof(struct sockaddr)) < 0)
 	{
 	    printf("Could not connect");
 		return NULL;
 	}
-	
+
 	/* Send headers to server */
 	int sent = 0;
 	while(sent < strlen(http_headers))
@@ -219,7 +224,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 		}
 		sent += tmpres;
 	 }
-	
+
 	/* Recieve into response*/
 	char *response = (char*)malloc(0);
 	char BUF[BUFSIZ];
@@ -241,7 +246,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
         printf("Unabel to recieve");
 		return NULL;
     }
-	
+
 	/* Reallocate response */
 	response = (char*)realloc(response, strlen(response) + 1);
 
@@ -251,7 +256,7 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	#else
 		close(sock);
 	#endif
-	
+
 	/* Parse status code and text */
 	char *status_line = get_until(response, "\r\n");
 	status_line = str_replace("HTTP/1.1 ", "", status_line);
@@ -262,22 +267,22 @@ struct http_response* http_req(char *http_headers, struct parsed_url *purl)
 	hresp->status_code = status_code;
 	hresp->status_code_int = atoi(status_code);
 	hresp->status_text = status_text;
-	
+
 	/* Parse response headers */
 	char *headers = get_until(response, "\r\n\r\n");
 	hresp->response_headers = headers;
-	
+
 	/* Assign request headers */
 	hresp->request_headers = http_headers;
-	
+
 	/* Assign request url */
 	hresp->request_uri = purl;
-	
+
 	/* Parse body */
 	char *body = strstr(response, "\r\n\r\n");
 	body = str_replace("\r\n\r\n", "", body);
 	hresp->body = body;
-	
+
 	/* Return response */
 	return hresp;
 }
@@ -294,10 +299,10 @@ struct http_response* http_get(char *url, char *custom_headers)
 		printf("Unable to parse url");
 		return NULL;
 	}
-	
+
 	/* Declare variable */
 	char *http_headers = (char*)malloc(1024);
-	
+
 	/* Build query/headers */
 	if(purl->path != NULL)
 	{
@@ -321,7 +326,7 @@ struct http_response* http_get(char *url, char *custom_headers)
 			sprintf(http_headers, "GET / HTTP/1.1\r\nHost:%s\r\nConnection:close\r\n", purl->host);
 		}
 	}
-	
+
 	/* Handle authorisation if needed */
 	if(purl->username != NULL)
 	{
@@ -329,20 +334,20 @@ struct http_response* http_get(char *url, char *custom_headers)
 		char *upwd = (char*)malloc(1024);
 		sprintf(upwd, "%s:%s", purl->username, purl->password);
 		upwd = (char*)realloc(upwd, strlen(upwd) + 1);
-		
+
 		/* Base64 encode */
 		char *base64 = base64_encode(upwd);
-		
+
 		/* Form header */
 		char *auth_header = (char*)malloc(1024);
 		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
 		auth_header = (char*)realloc(auth_header, strlen(auth_header) + 1);
-		
+
 		/* Add to header */
 		http_headers = (char*)realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
 		sprintf(http_headers, "%s%s", http_headers, auth_header);
 	}
-	
+
 	/* Add custom headers, and close */
 	if(custom_headers != NULL)
 	{
@@ -353,10 +358,10 @@ struct http_response* http_get(char *url, char *custom_headers)
 		sprintf(http_headers, "%s\r\n", http_headers);
 	}
 	http_headers = (char*)realloc(http_headers, strlen(http_headers) + 1);
-	
+
 	/* Make request and return response */
 	struct http_response *hresp = http_req(http_headers, purl);
-	
+
 	/* Handle redirect */
 	return handle_redirect_get(hresp, custom_headers);
 }
@@ -373,7 +378,7 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 		printf("Unable to parse url");
 		return NULL;
 	}
-	
+
 	/* Declare variable */
 	char *http_headers = (char*)malloc(1024);
 
@@ -400,7 +405,7 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 			sprintf(http_headers, "POST / HTTP/1.1\r\nHost:%s\r\nConnection:close\r\nContent-Length:%zu\r\nContent-Type:application/x-www-form-urlencoded\r\n", purl->host, strlen(post_data));
 		}
 	}
-	
+
 	/* Handle authorisation if needed */
 	if(purl->username != NULL)
 	{
@@ -408,20 +413,20 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 		char *upwd = (char*)malloc(1024);
 		sprintf(upwd, "%s:%s", purl->username, purl->password);
 		upwd = (char*)realloc(upwd, strlen(upwd) + 1);
-		
+
 		/* Base64 encode */
 		char *base64 = base64_encode(upwd);
-		
+
 		/* Form header */
 		char *auth_header = (char*)malloc(1024);
 		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
 		auth_header = (char*)realloc(auth_header, strlen(auth_header) + 1);
-		
+
 		/* Add to header */
 		http_headers = (char*)realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
 		sprintf(http_headers, "%s%s", http_headers, auth_header);
 	}
-	
+
 	if(custom_headers != NULL)
 	{
 		sprintf(http_headers, "%s%s\r\n", http_headers, custom_headers);
@@ -431,10 +436,10 @@ struct http_response* http_post(char *url, char *custom_headers, char *post_data
 		sprintf(http_headers, "%s\r\n%s", http_headers, post_data);
 	}
 	http_headers = (char*)realloc(http_headers, strlen(http_headers) + 1);
-	
+
 	/* Make request and return response */
 	struct http_response *hresp = http_req(http_headers, purl);
-	
+
 	/* Handle redirect */
 	return handle_redirect_post(hresp, custom_headers, post_data);
 }
@@ -451,10 +456,10 @@ struct http_response* http_head(char *url, char *custom_headers)
 		printf("Unable to parse url");
 		return NULL;
 	}
-	
+
 	/* Declare variable */
 	char *http_headers = (char*)malloc(1024);
-	
+
 	/* Build query/headers */
 	if(purl->path != NULL)
 	{
@@ -478,7 +483,7 @@ struct http_response* http_head(char *url, char *custom_headers)
 			sprintf(http_headers, "HEAD / HTTP/1.1\r\nHost:%s\r\nConnection:close\r\n", purl->host);
 		}
 	}
-	
+
 	/* Handle authorisation if needed */
 	if(purl->username != NULL)
 	{
@@ -486,20 +491,20 @@ struct http_response* http_head(char *url, char *custom_headers)
 		char *upwd = (char*)malloc(1024);
 		sprintf(upwd, "%s:%s", purl->username, purl->password);
 		upwd = (char*)realloc(upwd, strlen(upwd) + 1);
-		
+
 		/* Base64 encode */
 		char *base64 = base64_encode(upwd);
-		
+
 		/* Form header */
 		char *auth_header = (char*)malloc(1024);
 		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
 		auth_header = (char*)realloc(auth_header, strlen(auth_header) + 1);
-		
+
 		/* Add to header */
 		http_headers = (char*)realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
 		sprintf(http_headers, "%s%s", http_headers, auth_header);
 	}
-	
+
 	if(custom_headers != NULL)
 	{
 		sprintf(http_headers, "%s%s\r\n", http_headers, custom_headers);
@@ -509,10 +514,10 @@ struct http_response* http_head(char *url, char *custom_headers)
 		sprintf(http_headers, "%s\r\n", http_headers);
 	}
 	http_headers = (char*)realloc(http_headers, strlen(http_headers) + 1);
-	
+
 	/* Make request and return response */
 	struct http_response *hresp = http_req(http_headers, purl);
-	
+
 	/* Handle redirect */
 	return handle_redirect_head(hresp, custom_headers);
 }
@@ -529,10 +534,10 @@ struct http_response* http_options(char *url)
 		printf("Unable to parse url");
 		return NULL;
 	}
-	
+
 	/* Declare variable */
 	char *http_headers = (char*)malloc(1024);
-	
+
 	/* Build query/headers */
 	if(purl->path != NULL)
 	{
@@ -556,7 +561,7 @@ struct http_response* http_options(char *url)
 			sprintf(http_headers, "OPTIONS / HTTP/1.1\r\nHost:%s\r\nConnection:close\r\n", purl->host);
 		}
 	}
-	
+
 	/* Handle authorisation if needed */
 	if(purl->username != NULL)
 	{
@@ -564,27 +569,27 @@ struct http_response* http_options(char *url)
 		char *upwd = (char*)malloc(1024);
 		sprintf(upwd, "%s:%s", purl->username, purl->password);
 		upwd = (char*)realloc(upwd, strlen(upwd) + 1);
-		
+
 		/* Base64 encode */
 		char *base64 = base64_encode(upwd);
-		
+
 		/* Form header */
 		char *auth_header = (char*)malloc(1024);
 		sprintf(auth_header, "Authorization: Basic %s\r\n", base64);
 		auth_header = (char*)realloc(auth_header, strlen(auth_header) + 1);
-		
+
 		/* Add to header */
 		http_headers = (char*)realloc(http_headers, strlen(http_headers) + strlen(auth_header) + 2);
 		sprintf(http_headers, "%s%s", http_headers, auth_header);
 	}
-	
+
 	/* Build headers */
 	sprintf(http_headers, "%s\r\n", http_headers);
 	http_headers = (char*)realloc(http_headers, strlen(http_headers) + 1);
-	
+
 	/* Make request and return response */
 	struct http_response *hresp = http_req(http_headers, purl);
-	
+
 	/* Handle redirect */
 	return hresp;
 }
