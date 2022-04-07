@@ -19,6 +19,7 @@ Please note that all functions return a pointer to an insance of http_response. 
 	{
 		struct parsed_url *request_uri;
 		char *body;
+		size_t body_len;
 		char *status_code;
 		int status_code_int;
 		char *status_text;
@@ -26,26 +27,29 @@ Please note that all functions return a pointer to an insance of http_response. 
 		char *response_headers;
 	};
 	
-#####*request_uri
+##### *request_uri
 This is an instance of the parsed_url structure, this contains the request URL and all information about the request
 URL. Look up parsed_url for more information.
 
-#####*body
+##### *body
 This contains the response BODY (usually HTML).
 
-#####*status_code
+#####body_len
+This contains the length of the response. Useful to deal with binary data.
+
+##### *status_code
 This contains the HTTP Status code returned by the server in plain text format.
 
 #####status_code_int
 This returns the same as status_code but as an integer.
 
-#####*status_text
+##### *status_text
 This returns the text associated with the status code. For status code 200, OK will be returned.
 
-#####*request_headers
+##### *request_headers
 This contains the HTTP headers that were used to make the request.
 
-#####*response_headers
+##### *response_headers
 Contains the HTTP headers returned by the server.
 
 http_req()
