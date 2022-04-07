@@ -26,6 +26,7 @@ int main(int argc, char *argv[]) {
     if (response == NULL || response->status_code_int != 200) {
 
         fprintf(stderr, "request failed with status code #%d\n", response->status_code_int);
+        http_response_free(response);
         exit(1);
     }
 
