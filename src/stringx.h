@@ -33,6 +33,7 @@
 	#include <locale>
 #endif
 
+
 /*
 	Gets the offset of one string in another string
 */
@@ -115,17 +116,17 @@ char *urlencode(char *str)
 /*
 	Replacement for the string.h strndup, fixes a bug
 */
-char *str_ndup (const char *str, size_t max)
-{
-    size_t len = strnlen (str, max);
-    char *res = (char*)malloc (len + 1);
-    if (res)
-    {
-        memcpy (res, str, len);
-        res[len] = '\0';
-    }
-    return res;
-}
+//char *str_ndup (const char *str, size_t max)
+//{
+//    size_t len = strnlen (str, max);
+//    char *res = (char*)malloc (len + 1);
+//    if (res)
+//    {
+//        memcpy (res, str, len);
+//        res[len] = '\0';
+//    }
+//    return res;
+//}
 
 /*
 	Replacement for the string.h strdup, fixes a bug
@@ -152,15 +153,16 @@ char *str_replace(char *search , char *replace , char *subject)
 	}	
 	c = ( strlen(replace) - search_size )*c + strlen(subject);
 	new_subject = (char*)malloc( c );
-	strcpy(new_subject , "");
+    memset(new_subject, 0, c);
+//	strcpy(new_subject , "");
 	old = subject;	
 	for(p = strstr(subject , search) ; p != NULL ; p = strstr(p + search_size , search))
 	{
-		strncpy(new_subject + strlen(new_subject) , old , p - old);
-		strcpy(new_subject + strlen(new_subject) , replace);
+		strncpy(&new_subject[strlen(new_subject)] , old , p - old);
+		strcpy(&new_subject[strlen(new_subject)] , replace);
 		old = p + search_size;
 	}
-	strcpy(new_subject + strlen(new_subject) , old);	
+	strcpy(&new_subject[strlen(new_subject)] , old);
 	return new_subject;
 }
 
@@ -170,7 +172,7 @@ char *str_replace(char *search , char *replace , char *subject)
 char* get_until(char *haystack, char *until)
 {
 	int offset = str_index_of(haystack, until);
-	return str_ndup(haystack, offset);
+	return strndup(haystack, offset);
 }
 
 
@@ -183,43 +185,6 @@ void decodeblock(unsigned char in[], char *clrstr)
 	out[2] = in[2] << 6 | in[3] >> 0;
 	out[3] = '\0';
 	strncat((char *)clrstr, (char *)out, sizeof(out));
-}
-
-/*
-	Decodes a Base64 string
-*/
-char* base64_decode(char *b64src) 
-{
-	char *clrdst = (char*)malloc( ((strlen(b64src) - 1) / 3 ) * 4 + 4 + 50);
-	char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	int c, phase, i;
-	unsigned char in[4];
-	char *p;
-	clrdst[0] = '\0';
-	phase = 0; i=0;
-	while(b64src[i]) 
-	{
-		c = (int) b64src[i];
-		if(c == '=') 
-		{
-			decodeblock(in, clrdst); 
-			break;
-		}
-		p = strchr(b64, c);
-		if(p) 
-		{
-			in[phase] = p - b64;
-			phase = (phase + 1) % 4;
-			if(phase == 0) 
-			{
-				decodeblock(in, clrdst);
-				in[0]=in[1]=in[2]=in[3]=0;
-			}
-		}
-		i++;
-	}
-	clrdst = (char*)realloc(clrdst, strlen(clrdst) + 1);
-	return clrdst;
 }
 
 /* encodeblock - encode 3 8-bit binary bytes as 4 '6-bit' characters */
@@ -236,35 +201,3 @@ void encodeblock( unsigned char in[], char b64str[], int len )
     strncat((char *)b64str, (char *)out, sizeof(out));
 }
 
-/* 
-	Encodes a string with Base64
-*/
-char* base64_encode(char *clrstr) 
-{
-	char *b64dst = (char*)malloc(strlen(clrstr) + 50);
-	char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	unsigned char in[3];
-	int i, len = 0;
-	int j = 0;
-
-	b64dst[0] = '\0';
-	while(clrstr[j]) 
-	{
-		len = 0;
-		for(i=0; i<3; i++) 
-		{
-			in[i] = (unsigned char) clrstr[j];
-			if(clrstr[j]) 
-			{
-				len++; j++;
-			}
-			else in[i] = 0;
-		}
-		if( len ) 
-		{
-			encodeblock( in, b64dst, len );
-		}
-	}
-	b64dst = (char*)realloc(b64dst, strlen(b64dst) + 1);
-	return b64dst;
-}

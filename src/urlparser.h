@@ -25,6 +25,9 @@
 	http://www.ietf.org/rfc/rfc2616.txt
 */
 
+#include <netdb.h>
+#include <arpa/inet.h>
+
 /*
 	Represents an url
 */
@@ -97,13 +100,14 @@ struct parsed_url *parse_url(const char *url)
     struct parsed_url *purl;
     const char *tmpstr;
     const char *curstr;
-    int len;
+    size_t len;
     int i;
     int userpass_flag;
     int bracket_flag;
 
     /* Allocate the parsed url storage */
     purl = (struct parsed_url*)malloc(sizeof(struct parsed_url));
+    memset(purl, 0, sizeof (struct parsed_url));
     if ( NULL == purl ) 
 	{
         return NULL;
