@@ -34,13 +34,13 @@ URL. Look up parsed_url for more information.
 ##### *body
 This contains the response BODY (usually HTML).
 
-#####body_len
+##### body_len
 This contains the length of the response. Useful to deal with binary data.
 
 ##### *status_code
 This contains the HTTP Status code returned by the server in plain text format.
 
-#####status_code_int
+##### status_code_int
 This returns the same as status_code but as an integer.
 
 ##### *status_text
