@@ -9,6 +9,5 @@ include_directories(src)
 add_executable(http_client_c
         src/base64.h
         src/http-client-c.h
-        src/stringx.h
         src/urlparser.h
         test/main.c)

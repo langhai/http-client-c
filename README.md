@@ -17,17 +17,17 @@ Please note that all functions return a pointer to an insance of http_response. 
 
 	struct http_response
 	{
-		struct parsed_url *request_uri;
+		struct parsed_url *redirect_ui;
 		char *body;
 		size_t body_len;
 		char *status_code;
-		int status_code_int;
+		int status_code;
 		char *status_text;
 		char *request_headers;
 		char *response_headers;
 	};
 	
-##### *request_uri
+##### *redirect_ui
 This is an instance of the parsed_url structure, this contains the request URL and all information about the request
 URL. Look up parsed_url for more information.
 
@@ -40,7 +40,7 @@ This contains the length of the response. Useful to deal with binary data.
 ##### *status_code
 This contains the HTTP Status code returned by the server in plain text format.
 
-##### status_code_int
+##### status_code
 This returns the same as status_code but as an integer.
 
 ##### *status_text
@@ -52,24 +52,24 @@ This contains the HTTP headers that were used to make the request.
 ##### *response_headers
 Contains the HTTP headers returned by the server.
 
-http_req()
+http_request_exec()
 -------------
-http_req is the basis for all other http_* methodes and makes and HTTP request and returns an instance of the http_response structure.
+http_request_exec is the basis for all other http_* methodes and makes and HTTP request and returns an instance of the http_response structure.
 
 The prototype for this function is:
 
-	struct http_response* http_req(char *http_headers, struct parsed_url *purl)
+	struct http_response* http_request_exec(char *http_headers, struct parsed_url *purl)
 	
 A simple example is:
 	
 	struct parsed_url *purl = parse_url("http://www.google.com/");
-	struct http_response *hrep = http_req("GET / HTTP/1.1\r\nHostname:www.google.com\r\nConnection:close\r\n\r\n", purl);
+	struct http_response *hrep = http_request_exec("GET / HTTP/1.1\r\nHostname:www.google.com\r\nConnection:close\r\n\r\n", purl);
 
-Please note that http_req does not handle redirects. (Status code 300-399)
+Please note that http_request_exec does not handle redirects. (Status code 300-399)
 
 http_get()
 -------------
-Makes an HTTP GET request to the specified URL. This function makes use of the http_req function. It specifies
+Makes an HTTP GET request to the specified URL. This function makes use of the http_request_exec function. It specifies
 the minimal headers required, in the second parameter you can specify extra headers.
 
 The prototype for this function is:
@@ -88,7 +88,7 @@ http_get does handle redirects automaticly. The basic headers used in this metho
 	
 http_post
 ------------
-Makes an HTTP POST request to the specified URL. This function makes use of the http_req function. It specifies
+Makes an HTTP POST request to the specified URL. This function makes use of the http_request_exec function. It specifies
 the minimal headers required, in the second parameter you can specify extra headers. In the third parameter
 the post data can be specified.
 
