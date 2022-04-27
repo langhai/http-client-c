@@ -2,11 +2,11 @@
 // Created by tbela on 2022-04-07.
 //
 #include "http/client.h"
-#include "wchar.h"
+//#include "wchar.h"
 
 FILE *fp;
 
-void respone_header_cb(http_header *headers) {
+void response_header_cb(http_header *headers) {
 
     http_header *header = headers;
 
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     http_request_option(request, HTTP_OPTION_URL, argv[1], 0);
 //    http_request_option(request, HTTP_OPTION_METHOD, "POST");
 //    http_request_option(request, HTTP_OPTION_BODY, "a=1&b=2");
-    http_request_option(request, HTTP_OPTION_RESPONSE_HEADER_CALLBACK, respone_header_cb, 0);
+    http_request_option(request, HTTP_OPTION_RESPONSE_HEADER_CALLBACK, response_header_cb, 0);
     http_request_option(request, HTTP_OPTION_RESPONSE_BODY_CALLBACK, response_body_cb, 0);
     http_request_header_set(request, "User-Agent", "FireFlox");
 //    http_request_header_set(request, "Authorization", "Bearer <secret>");

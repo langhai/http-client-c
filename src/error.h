@@ -11,7 +11,8 @@ typedef enum {
     HTTP_CLIENT_ERROR_HOST = -3,
     HTTP_CLIENT_ERROR_DATA = -4,
     HTTP_CLIENT_ERROR_RECV = -5,
-    HTTP_CLIENT_ERROR_TRANSFER_ENCODING = -6
+    HTTP_CLIENT_ERROR_TRANSFER_ENCODING = -6,
+    HTTP_CLIENT_PROTO = -7
 } http_client_errors;
 
 char *http_client_error(http_client_errors);

@@ -478,7 +478,6 @@ http_client_errors http_request_send(http_response *hresp, http_header *request_
 //    size_t response_len = 0;
 //    uint8_t headers_parsed = 0;
     char *chunk = NULL;
-
     if ((received_len = recv(sock, BUF, BUF_READ - 1, 0)) > 0) {
 
         BUF[received_len] = '\0';
