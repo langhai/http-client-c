@@ -1,13 +1,14 @@
 //
 // Created by tbela on 2022-04-07.
 //
-#include "http-client-c.h"
+#include "http/client.h"
+#include "wchar.h"
 
 FILE *fp;
 
-void respone_header_cb(struct http_header *headers) {
+void respone_header_cb(http_header *headers) {
 
-    struct http_header *header = headers;
+    http_header *header = headers;
 
     fprintf(stderr, "headers received:\n");
 
@@ -18,20 +19,22 @@ void respone_header_cb(struct http_header *headers) {
     }
 }
 
-void response_body_cb(const char *chunk, size_t chunk_len, struct http_header *headers, int stop) {
+void response_body_cb(const char *chunk, size_t chunk_len, http_header *headers) {
 
     if (chunk_len > 0) {
 
-        fprintf(stderr, "writing %lu bytes of data:\n", chunk_len);
+//        fprintf(stderr, "\n\nwriting %lu bytes of data:\n\n", chunk_len);
         fwrite(chunk, 1, chunk_len, fp);
 
-        struct http_header *content_type = http_header_get(headers, "Content-Type");
+        http_header *content_type = http_header_get(headers, "Content-Type");
 
         // if text content, dump to stderr
         if (content_type != NULL && strstr(content_type->value, "text/") != NULL) {
 
-            fwrite(chunk, 1, chunk_len, stderr);
+            fwrite(chunk, chunk_len, 1, stderr);
         }
+
+        http_header_free(content_type);
     }
 }
 
@@ -46,22 +49,22 @@ int main(int argc, char *argv[]) {
     char *filename = argc > 2 ? argv[2] : "";
     fprintf(stderr, "opening %s ...\n", filename);
 
-    struct http_request *request = http_request_new();
+    http_request *request = http_request_new();
 
 //    printf("url: %s\n", argv[1]);
 
     http_request_option(request, HTTP_OPTION_URL, argv[1], 0);
-//    http_request_option(request, HTTP_OPTION_METHOD, "POST", 0);
-//    http_request_option(request, HTTP_OPTION_BODY, "a=1&b=2", 0);
+//    http_request_option(request, HTTP_OPTION_METHOD, "POST");
+//    http_request_option(request, HTTP_OPTION_BODY, "a=1&b=2");
     http_request_option(request, HTTP_OPTION_RESPONSE_HEADER_CALLBACK, respone_header_cb, 0);
     http_request_option(request, HTTP_OPTION_RESPONSE_BODY_CALLBACK, response_body_cb, 0);
-//    http_header_set(request, "User-Agent", "IRON BOY");
-//    http_header_set(request, "Authorization", "Bearer <secret>");
-    http_header_add(request, "Authorization", "Bearer afeb5dv86");
+    http_request_header_set(request, "User-Agent", "FireFlox");
+//    http_request_header_set(request, "Authorization", "Bearer <secret>");
+    http_request_header_add(request, "Authorization", "Bearer afeb5dv86");
 
     fp = fopen(filename, "wb");
 
-    struct http_response *response = http_request_exec(request);
+    http_response *response = http_request_exec(request);
 
     fclose(fp);
 
@@ -69,7 +72,7 @@ int main(int argc, char *argv[]) {
     http_response_free(response);
 
 
-//    struct http_response *response = http_get(argv[1], custom_headers);
+//    http_response *response = http_get(argv[1], custom_headers);
 //
 //    if (response) {
 //

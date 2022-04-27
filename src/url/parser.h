@@ -34,7 +34,7 @@
 /*
 	Represents an url
 */
-struct parsed_url {
+typedef struct parsed_url {
     char *uri;                    /* mandatory */
     char *scheme;               /* mandatory */
     char *host;                 /* mandatory */
@@ -45,12 +45,12 @@ struct parsed_url {
     char *fragment;             /* optional */
     char *username;             /* optional */
     char *password;             /* optional */
-};
+} parsed_url;
 
 /*
 	Free memory of parsed url
 */
-void parsed_url_free(struct parsed_url *purl) {
+void parsed_url_free(parsed_url *purl) {
     if (NULL != purl) {
         if (NULL != purl->scheme) free(purl->scheme);
         if (NULL != purl->host) free(purl->host);
@@ -90,10 +90,10 @@ int is_scheme_char(int c) {
 	RFC 1738 - http://www.ietf.org/rfc/rfc1738.txt
 	RFC 3986 -  http://www.ietf.org/rfc/rfc3986.txt
 */
-struct parsed_url *parse_url(const char *url) {
+parsed_url *parse_url(const char *url) {
 
     /* Define variable */
-    struct parsed_url *purl;
+    parsed_url *purl;
     const char *tmpstr;
     const char *curstr;
     size_t len;
@@ -102,8 +102,8 @@ struct parsed_url *parse_url(const char *url) {
     int bracket_flag;
 
     /* Allocate the parsed url storage */
-    purl = (struct parsed_url *) malloc(sizeof(struct parsed_url));
-    memset(purl, 0, sizeof(struct parsed_url));
+    purl = (parsed_url *) calloc(1, sizeof(parsed_url));
+
     if (NULL == purl) {
         return NULL;
     }
