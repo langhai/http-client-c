@@ -39,6 +39,27 @@ char *hex2str(char *str, size_t *len) {
     return result;
 }
 
+char *ltrim(char *str) {
+
+    char *trim = str;
+
+    while (trim) {
+
+        if (trim[0] == ' ' ||
+            trim[0] == '\n'||
+            trim[0] == '\r'||
+            trim[0] == '\t') {
+
+            trim++;
+            continue;
+        }
+
+        break;
+    }
+
+    return strdup(trim == NULL ? "" : trim);
+}
+
 size_t hex2dec(const char *hex, size_t len) {
 
     size_t i = len;

@@ -2,7 +2,6 @@
 // Created by tbela on 2022-04-07.
 //
 #include "http/client.h"
-//#include "wchar.h"
 
 FILE *fp;
 
@@ -12,18 +11,34 @@ void response_header_cb(http_header *headers) {
 
     fprintf(stderr, "headers received:\n");
 
-    while (header != NULL) {
+    char *printed = http_header_print(headers);
 
-        fprintf(stderr, "header -> '%s: %s'\n", header->name, header->value);
-        header = header->next;
-    }
+    fprintf(stderr, "%s\r\n", printed);
+
+    fwrite(printed, strlen(printed), 1, fp);
+    fwrite("\r\n", 2, 1, fp);
+    free(printed);
+}
+
+void request_header_cb(http_header *headers) {
+
+    http_header *header = headers;
+
+    fprintf(stderr, "headers sent:\n");
+
+    char *printed = http_header_print(headers);
+
+    fprintf(stderr, "%s\r\n", printed);
+
+    fwrite(printed, strlen(printed), 1, fp);
+    fwrite("\r\n", 2, 1, fp);
+    free(printed);
 }
 
 void response_body_cb(const char *chunk, size_t chunk_len, http_header *headers) {
 
     if (chunk_len > 0) {
 
-//        fprintf(stderr, "\n\nwriting %lu bytes of data:\n\n", chunk_len);
         fwrite(chunk, 1, chunk_len, fp);
 
         http_header *content_type = http_header_get(headers, "Content-Type");
@@ -39,6 +54,18 @@ void response_body_cb(const char *chunk, size_t chunk_len, http_header *headers)
 }
 
 int main(int argc, char *argv[]) {
+
+//    size_t header_len = 0;
+//    http_header *headers = http_header_parse("P3P: CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"\r\ncache-control: private, max-age=36500", &header_len);
+//
+//    char *print = http_header_print(headers);
+//
+//    fprintf(stderr, "%s", print);
+//
+//    free(print);
+//    http_header_free(headers);
+//
+//    return 0;
 
     if (argc <= 2) {
 
@@ -56,11 +83,15 @@ int main(int argc, char *argv[]) {
     http_request_option(request, HTTP_OPTION_URL, argv[1], 0);
 //    http_request_option(request, HTTP_OPTION_METHOD, "POST");
 //    http_request_option(request, HTTP_OPTION_BODY, "a=1&b=2");
+    http_request_option(request, HTTP_OPTION_REQUEST_TIMEOUT, "5", 0);
+    http_request_option(request, HTTP_OPTION_REQUEST_HEADER_CALLBACK, request_header_cb, 0);
     http_request_option(request, HTTP_OPTION_RESPONSE_HEADER_CALLBACK, response_header_cb, 0);
     http_request_option(request, HTTP_OPTION_RESPONSE_BODY_CALLBACK, response_body_cb, 0);
-    http_request_header_set(request, "User-Agent", "FireFlox");
+    http_request_header_set(request, "User-Agent", "Firevox");
 //    http_request_header_set(request, "Authorization", "Bearer <secret>");
-    http_request_header_add(request, "Authorization", "Bearer afeb5dv86");
+    http_request_header_add(request, "Accept-Language", "en-US;q=0.6,en;q=0.4");
+    //
+    //	fr-CA,en-CA;q=0.8,en-US;q=0.6,en;q=0.4,fr;q=0.2
 
     fp = fopen(filename, "wb");
 

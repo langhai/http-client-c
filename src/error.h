@@ -44,6 +44,10 @@ char *http_client_error(http_client_errors err) {
         case HTTP_CLIENT_ERROR_TRANSFER_ENCODING:
 
             return "unsupported transfer encoding";
+
+        case HTTP_CLIENT_PROTO:
+
+            return "unsupported protocol";
     }
 
     return "";

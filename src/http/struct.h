@@ -5,48 +5,56 @@
 #ifndef HTTP_CLIENT_C_HTTP_STRUCT_H
 #define HTTP_CLIENT_C_HTTP_STRUCT_H
 
-#define BUF_READ 16384
+#define BUF_READ 8192
 #define HTTP_CLIENT_C_HTTP_MAX_REDIRECT 10;
 
 #include "http/header.h"
 
+typedef struct http_request http_request;
+
 typedef void (http_header_cb_ptr)(http_header *);
-typedef void (http_response_body_cb_ptr)(const wchar_t*, size_t, http_header *);
+typedef void (http_response_body_cb_ptr)(const char*, size_t, http_header *);
 
 typedef enum {
     HTTP_OPTION_URL,
     HTTP_OPTION_HEADER,
     HTTP_OPTION_BODY,
     HTTP_OPTION_METHOD,
+    HTTP_OPTION_REQUEST_TIMEOUT,
     HTTP_OPTION_REQUEST_HEADER_CALLBACK,
     HTTP_OPTION_RESPONSE_HEADER_CALLBACK,
     HTTP_OPTION_RESPONSE_BODY_CALLBACK
 } http_option;
 
+typedef struct http_struct {
+
+    http_header *headers;
+    char *body;
+    size_t body_len;
+} http_struct;
+
+
 typedef struct http_request {
+    struct http_struct;
     char *request_uri;
     int max_redirect;
     char *method;
-    char *body;
-    size_t body_len;
-    http_header *headers;
     http_header_cb_ptr *request_header_cb;
     http_header_cb_ptr *response_header_cb;
     http_response_body_cb_ptr *response_body_cb;
+    struct timeval *timeout;
 } http_request;
 
 /*
 	Represents an HTTP html response
 */
 typedef struct http_response {
-//    char *body;
+    struct http_struct;
     char *redirect_uri;
-    size_t body_len;
     uint8_t redirected;
     int redirect_count;
     int status_code;
     char *status_text;
-    http_header *headers;
 } http_response;
 
 void http_response_free(http_response *hresp);
@@ -58,6 +66,9 @@ http_request *http_request_new() {
     if (hreq != NULL) {
 
         hreq->max_redirect = HTTP_CLIENT_C_HTTP_MAX_REDIRECT;
+        hreq->timeout = (struct timeval *) calloc(1, sizeof (struct timeval));
+        hreq->timeout->tv_sec = 10;
+        hreq->timeout->tv_usec = 0;
     }
 
     return hreq;
@@ -87,6 +98,7 @@ void http_request_free(http_request *hreq) {
             free(hreq->method);
         }
 
+        free(hreq->timeout);
         free(hreq);
     }
 }

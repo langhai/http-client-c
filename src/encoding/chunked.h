@@ -6,9 +6,7 @@
 #include "stringx.h"
 
 int http_chunked_transfer_block_info(const char *buf, long buf_len, size_t *offset, size_t *data_len);
-
-int http_chunked_transfer_decode(int socket, const char *buf, size_t buf_len, size_t offset, http_header *headers,
-                                 http_response_body_cb_ptr *);
+int http_chunked_transfer_decode(int sock, const char *buf, size_t buf_len, size_t offset, http_request *, http_response *);
 
 /**
  *
@@ -47,10 +45,9 @@ http_client_errors http_chunked_transfer_block_info(const char *buf, long buf_le
     return HTTP_CLIENT_ERROR_OK;
 }
 
-int http_chunked_transfer_decode(int socket, const char *buf, size_t buf_len, size_t offset, http_header *headers,
-                                 http_response_body_cb_ptr *body_cb_ptr) {
+int http_chunked_transfer_decode(int sock, const char *buf, size_t buf_len, size_t offset, http_request *hreq, http_response *hresp) {
 
-    size_t bytes_read = 0;
+    size_t bytes_read;
     size_t block_size = 0;
     size_t block_offset = 0;
 
@@ -81,12 +78,12 @@ int http_chunked_transfer_decode(int socket, const char *buf, size_t buf_len, si
                 if (block_size > buf_len - offset) {
 
                     bytes_read = buf_len - block_offset - offset;
-                    body_cb_ptr(&data[offset] + block_offset, bytes_read, headers);
+                    hreq->response_body_cb(&data[offset] + block_offset, bytes_read, hresp->headers);
 
                     block_size -= bytes_read;
 
                     chunked_read:
-                        received_len = recv(socket, data, BUF_READ - 1, 0);
+                        received_len = recv(sock, data, BUF_READ - 1, 0);
                         offset = 0;
 
                         if (received_len < 0) {
@@ -103,18 +100,18 @@ int http_chunked_transfer_decode(int socket, const char *buf, size_t buf_len, si
 
                         if (received_len >= block_size) {
 
-                            body_cb_ptr(&data[offset], block_size, headers);
+                            hreq->response_body_cb(&data[offset], block_size, hresp->headers);
                             offset = block_size + 2;
                             goto block_info;
                         } else {
 
-                            body_cb_ptr(&data[offset], received_len, headers);
+                            hreq->response_body_cb(&data[offset], received_len, hresp->headers);
                             block_size -= received_len;
                             goto chunked_read;
                         }
                 } else {
 
-                    body_cb_ptr(&data[offset], block_size, headers);
+                    hreq->response_body_cb(&data[offset], block_size, hresp->headers);
                     offset += block_offset + block_size + 2;
                     goto block_info;
                 }
