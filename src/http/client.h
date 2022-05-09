@@ -217,6 +217,12 @@ http_response *http_request_exec(http_request *hreq) {
         }
     }
 
+    if (!http_header_exists(hreq->headers, "Accept-Encoding")) {
+
+        // disable encoding pleas please
+        http_request_header_set(hreq, "Accept-Encoding", "identity");
+    }
+
     if (!http_header_exists(hreq->headers, "User-Agent")) {
 
         http_request_header_set(hreq, "User-Agent", "http-client-c");
@@ -298,12 +304,13 @@ http_response *http_request_exec(http_request *hreq) {
             break;
         }
 
-//        break;
         hresp->redirect_count++;
         http_header *location = http_header_get(hresp->headers, "Location");
 
+        hresp->redirect_uri = strdup(location->value);
         purl = parse_url(location->value);
         http_header_free(hresp->headers);
+        hresp->headers = NULL;
 
         // change HTTP method?
         const char *method = hresp->status_code == 307 ? hreq->method : (strcasecmp(hreq->method, "GET") == 0 ||
@@ -431,11 +438,12 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
     http_client_errors error_reason = HTTP_CLIENT_ERROR_OK;
     size_t tmpres;
     struct sockaddr_in *remote = NULL;
+    http_transfer_encoding *te = NULL;
 
     /* Create TCP socket */
     if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0
-        || setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, hreq->timeout, sizeof *hreq->timeout) < 0
-        || setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, hreq->timeout, sizeof *hreq->timeout) < 0
+        || setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, hreq->request_timeout, sizeof *hreq->request_timeout) < 0
+        || setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, hreq->request_timeout, sizeof *hreq->request_timeout) < 0
         ) {
 
         error_reason = HTTP_CLIENT_ERROR_CONNECT;
@@ -486,7 +494,6 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
     /* Receive into response*/
     char BUF[BUF_READ];
 
-    http_transfer_encoding *te = NULL;
     ssize_t received_len;
 
     if ((received_len = recv(sock, BUF, BUF_READ - 1, 0)) > 0) {
@@ -510,9 +517,7 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
                 char *status_text = strstr(status_line, " ");
 
                 hresp->status_code = atoi(status_text);
-                hresp->status_text = (char *) malloc(sizeof status_text);
-
-                memcpy(hresp->status_text, &status_text[1], strlen(status_text));
+                hresp->status_text = strdup(&status_text[1]);
             }
 
             size_t headers_len = 0;
@@ -529,7 +534,7 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
                 goto exit;
             }
 
-            if (hreq->response_body_cb != NULL) {
+//            if (hreq->response_body_cb != NULL) {
 
                 http_header *teh = http_header_get(hresp->headers, "Transfer-Encoding");
 
@@ -540,7 +545,7 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
 
                 error_reason = http_transfer_decode(te, sock, BUF, received_len, (body_end - BUF) + 4, hreq, hresp);
                 goto exit;
-            }
+//            }
         }
     }
 
@@ -556,11 +561,6 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
 
         free(remote);
     }
-
-//    if (chunk != NULL) {
-//
-//        free(chunk);
-//    }
 
     if (te != NULL) {
 
@@ -589,7 +589,7 @@ void http_request_option(http_request *hreq, http_option option, const void *val
 
         case HTTP_OPTION_URL:
 
-            hreq->request_uri = (char *) val;
+            hreq->request_uri = strdup((char *) val);
             break;
 
         case HTTP_OPTION_HEADER:
@@ -604,7 +604,7 @@ void http_request_option(http_request *hreq, http_option option, const void *val
             break;
 
         case HTTP_OPTION_REQUEST_TIMEOUT:
-            hreq->timeout->tv_sec = atol(val);
+            hreq->request_timeout->tv_sec = atol(val);
             break;
 
         case HTTP_OPTION_REQUEST_HEADER_CALLBACK:

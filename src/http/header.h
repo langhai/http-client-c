@@ -32,10 +32,12 @@ http_header *http_header_new();
 http_header_attribute *http_header_attribute_new();
 
 http_header *http_header_clone(http_header *);
+http_header_attribute *http_header_attribute_clone(http_header_attribute *);
 
 int http_header_exists(http_header *header, const char *name);
 
 http_header *http_header_get(http_header *header, const char *name);
+http_header_attribute *http_header_attribute_get(http_header *header, const char *name);
 
 void http_header_set_name(http_header *header, char *name);
 
@@ -91,6 +93,21 @@ http_header *http_header_clone(http_header *headers) {
     return header;
 }
 
+http_header_attribute *http_header_attribute_clone(http_header_attribute *attr) {
+
+    http_header_attribute *clone = http_header_attribute_new();
+
+    clone->type = attr->type;
+    clone->name = strdup(attr->name);
+
+    if (attr->value != NULL) {
+
+        clone->value = strdup(attr->value);
+    }
+
+    return clone;
+}
+
 int http_header_exists(http_header *header, const char *name) {
 
     http_header *head = header;
@@ -142,6 +159,23 @@ http_header *http_header_get(http_header *header, const char *name) {
     }
 
     return result;
+}
+
+http_header_attribute *http_header_attribute_get(http_header *header, const char *name) {
+
+    http_header_attribute *head = header->attribute;
+
+    while (head != NULL) {
+
+        if (strcasecmp(head->name, name) == 0) {
+
+            return http_header_attribute_clone(head);
+        }
+
+        head = head->next;
+    }
+
+    return NULL;
 }
 
 void http_header_set_name(http_header *header, char *name) {

@@ -42,16 +42,15 @@ typedef struct http_request {
     http_header_cb_ptr *request_header_cb;
     http_header_cb_ptr *response_header_cb;
     http_response_body_cb_ptr *response_body_cb;
-    struct timeval *timeout;
+    struct timeval *request_timeout;
 } http_request;
 
 /*
-	Represents an HTTP html response
+	Represents an HTTP response
 */
 typedef struct http_response {
     struct http_struct;
     char *redirect_uri;
-    uint8_t redirected;
     int redirect_count;
     int status_code;
     char *status_text;
@@ -66,9 +65,9 @@ http_request *http_request_new() {
     if (hreq != NULL) {
 
         hreq->max_redirect = HTTP_CLIENT_C_HTTP_MAX_REDIRECT;
-        hreq->timeout = (struct timeval *) calloc(1, sizeof (struct timeval));
-        hreq->timeout->tv_sec = 10;
-        hreq->timeout->tv_usec = 0;
+        hreq->request_timeout = (struct timeval *) calloc(1, sizeof (struct timeval));
+        hreq->request_timeout->tv_sec = 10;
+        hreq->request_timeout->tv_usec = 0;
     }
 
     return hreq;
@@ -93,12 +92,22 @@ void http_request_free(http_request *hreq) {
             http_header_free(hreq->headers);
         }
 
+        if (hreq->request_uri != NULL) {
+
+            free(hreq->request_uri);
+        }
+
+        if (hreq->body != NULL) {
+
+            free(hreq->body);
+        }
+
         if (hreq->method != NULL) {
 
             free(hreq->method);
         }
 
-        free(hreq->timeout);
+        free(hreq->request_timeout);
         free(hreq);
     }
 }
@@ -112,6 +121,17 @@ void http_response_free(http_response *hresp) {
 
             free(hresp->status_text);
         }
+
+        if (hresp->redirect_uri != NULL) {
+
+            free(hresp->redirect_uri);
+        }
+
+        if (hresp->body != NULL) {
+
+            free(hresp->body);
+        }
+
         if (hresp->headers != NULL) {
 
             http_header_free(hresp->headers);

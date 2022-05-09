@@ -26,12 +26,7 @@ void http_transfer_encoding_free(http_transfer_encoding *);
 //
 http_transfer_encoding *http_transfer_encoding_new() {
 
-    http_transfer_encoding *te = (http_transfer_encoding *) malloc(sizeof (http_transfer_encoding));
-
-    if (te != NULL) {
-
-        memset(te, 0, sizeof (http_transfer_encoding));
-    }
+    http_transfer_encoding *te = (http_transfer_encoding *) calloc(sizeof (http_transfer_encoding), 1);
 
     return te;
 }
@@ -119,11 +114,13 @@ void http_transfer_encoding_free(http_transfer_encoding *te) {
         if (te->value != NULL) {
 
             free(te->value);
+            te->value = NULL;
         }
 
         if (te->next != NULL) {
 
             http_transfer_encoding_free(te->next);
+            te->next = NULL;
         }
 
         free(te);
