@@ -10,102 +10,238 @@ in C, it can be used in C++ code as well.
 
 Basic Usage
 ===============
-http_response 
--------------
-http_response is a structure that is returned by all http_* methods, it contains information about the requse and the response.
-Please note that all functions return a pointer to an insance of http_response. The structure is as following:
 
-	struct http_response
-	{
-		struct parsed_url *request_uri;
-		char *body;
-		size_t body_len;
-		char *status_code;
-		int status_code_int;
-		char *status_text;
-		char *request_headers;
-		char *response_headers;
-	};
-	
-##### *request_uri
-This is an instance of the parsed_url structure, this contains the request URL and all information about the request
-URL. Look up parsed_url for more information.
+```c
+
+    http_request *request = http_request_new();
+
+    http_request_option(request, HTTP_OPTION_URL, argv[1], 0);
+    //  http_request_option(request, HTTP_OPTION_METHOD, "POST");
+    //  http_request_option(request, HTTP_OPTION_BODY, "a=1&b=2");
+    http_request_option(request, HTTP_OPTION_REQUEST_TIMEOUT, "5", 0);
+    http_request_option(request, HTTP_OPTION_REQUEST_HEADER_CALLBACK, request_header_cb, 0);
+    http_request_option(request, HTTP_OPTION_RESPONSE_HEADER_CALLBACK, response_header_cb, 0);
+    http_request_option(request, HTTP_OPTION_RESPONSE_BODY_CALLBACK, response_body_cb, 0);
+    // add an HTTP header, replace existing   
+    http_request_header_set(request, "User-Agent", "Firefox 12");
+    //  http_request_header_set(request, "Authorization", "Bearer <secret>");
+    //  add an HTTP header, keep existing
+    http_request_header_add(request, "Accept-Language", "en-US;q=0.6,en;q=0.4");
+
+    // execute the request
+    http_response *response = http_request_exec(request);
+
+    http_request_free(request);
+    http_response_free(response);
+```
+
+## http_request
+
+the request structure.
+
+```c
+
+typedef struct http_request {
+    http_header *headers;
+    size_t body_len;
+    char *body;
+    char *request_uri;
+    int max_redirect;
+    char *method;
+    http_header_cb_ptr *request_header_cb;
+    http_header_cb_ptr *response_header_cb;
+    http_response_body_cb_ptr *response_body_cb;
+    struct timeval *request_timeout;
+} http_request;
+
+```
+
+## create a request struct pointer.
+
+```c
+http_request *request = http_request_new();
+```
+
+## configure the request options
+
+```c
+
+// http_request *hreq - the request struct pointer
+// http_option option - the option to configure
+// const void *val - option payload
+// size_t len - the payload length, only needed if the payload is a binary string, otherwise pass 0
+// void http_request_option(http_request *hreq, http_option option, const void *val, size_t len)
+
+
+    http_request_option(request, HTTP_OPTION_URL, argv[1], 0);
+//    http_request_option(request, HTTP_OPTION_METHOD, "POST");
+//    http_request_option(request, HTTP_OPTION_BODY, "a=1&b=2");
+    http_request_option(request, HTTP_OPTION_REQUEST_TIMEOUT, "5", 0);
+    http_request_option(request, HTTP_OPTION_REQUEST_HEADER_CALLBACK, request_header_cb, 0);
+    http_request_option(request, HTTP_OPTION_RESPONSE_HEADER_CALLBACK, response_header_cb, 0);
+    http_request_option(request, HTTP_OPTION_RESPONSE_BODY_CALLBACK, response_body_cb, 0);
+    http_request_header_set(request, "User-Agent", "Firefox 12");
+//    http_request_header_set(request, "Authorization", "Bearer <secret>");
+    http_request_header_add(request, "Accept-Language", "en-US;q=0.6,en;q=0.4");
+```
+
+### http option flags
+- HTTP_OPTION_URL: pass the url
+- HTTP_OPTION_HEADER: pass an HTTP header as a _struct http_header_ pointer
+- HTTP_OPTION_BODY: pass the request payload
+- HTTP_OPTION_METHOD:  pass the HTTP method
+- HTTP_OPTION_REQUEST_TIMEOUT: set the request timeout as a numeric string
+- HTTP_OPTION_REQUEST_HEADER_CALLBACK: pass a request header callback (see ./test/main.c for an example)
+- HTTP_OPTION_RESPONSE_HEADER_CALLBACK: pass a response header callback  (see ./test/main.c for an example)
+- HTTP_OPTION_RESPONSE_BODY_CALLBACK: pass a response body callback  (see ./test/main.c for an example)
+
+http_response
+-------------
+http_response is a structure that is returned by _http_request_exec_ method, it contains information about the response.
+Please note that this function returns a pointer to an instance of http_response. The structure is as following:
+
+```c
+
+typedef struct http_response {
+    http_header *headers;
+    char *body;
+    size_t body_len;
+    char *redirect_uri;
+    int redirect_count;
+    int status_code;
+    char *status_text;
+} http_response;
+```
+
+##### *redirect_ui
+The last redirected url.
+
+##### *redirect_count
+the HTTP redirect count
 
 ##### *body
-This contains the response BODY (usually HTML).
+The response body. always NULL if you set a response body callback
 
 ##### body_len
-This contains the length of the response. Useful to deal with binary data.
+the response body length
 
-##### *status_code
-This contains the HTTP Status code returned by the server in plain text format.
-
-##### status_code_int
-This returns the same as status_code but as an integer.
+##### status_code
+the response HTTP status code
 
 ##### *status_text
 This returns the text associated with the status code. For status code 200, OK will be returned.
 
-##### *request_headers
-This contains the HTTP headers that were used to make the request.
+##### *headers
+response HTTP headers as _struct http_header_ pointer.
 
-##### *response_headers
-Contains the HTTP headers returned by the server.
+## HTTP response callback
 
-http_req()
--------------
-http_req is the basis for all other http_* methodes and makes and HTTP request and returns an instance of the http_response structure.
+Provide an HTTP response body callback to handle large HTTP response payload efficiently.
+this will avoid allocating memory to hold the response.
 
-The prototype for this function is:
+## full example
 
-	struct http_response* http_req(char *http_headers, struct parsed_url *purl)
-	
-A simple example is:
-	
-	struct parsed_url *purl = parse_url("http://www.google.com/");
-	struct http_response *hrep = http_req("GET / HTTP/1.1\r\nHostname:www.google.com\r\nConnection:close\r\n\r\n", purl);
+```c
 
-Please note that http_req does not handle redirects. (Status code 300-399)
+#include "http/client.h"
 
-http_get()
--------------
-Makes an HTTP GET request to the specified URL. This function makes use of the http_req function. It specifies
-the minimal headers required, in the second parameter you can specify extra headers.
+FILE *fp;
 
-The prototype for this function is:
+/**
+ * response header callback
+ * @param headers
+ */
+void response_header_cb(http_header *headers) {
 
-	struct http_response* http_get(char *url, char *custom_headers)
-	
-A simple example is:
+    http_header *header = headers;
 
-	struct http_response *hresp = http_get("http://www.google.com", "User-agent:MyUserAgent\r\n");
-	
-http_get does handle redirects automaticly. The basic headers used in this method:
+    fprintf(stderr, "headers received:\n");
 
-	GET / HTTP/1.1
-	Hostname:www.google.com
-	Connection:close
-	
-http_post
-------------
-Makes an HTTP POST request to the specified URL. This function makes use of the http_req function. It specifies
-the minimal headers required, in the second parameter you can specify extra headers. In the third parameter
-the post data can be specified.
+    char *printed = http_header_print(headers);
 
-The prototype for this function is:
+    fprintf(stderr, "%s\r\n", printed);
 
-	struct http_response* http_post(char *url, char *custom_headers, char *post_data)
-	
-A simple example is:
+    fwrite(printed, strlen(printed), 1, fp);
+    fwrite("\r\n", 2, 1, fp);
+    free(printed);
+}
 
-	struct http_response *hresp = http_post("http://mywebsite.com/login.php", "User-agent:MyuserAgent\r\n", "username=Kirk&password=lol123");
-	
-http_post does handle redirects automaticly. The basic headers used in this method:
+/**
+ * request header callback
+ * @param headers
+ */
+void request_header_cb(http_header *headers) {
 
-	POST /login.php HTTP/1.1
-	Hostname:mywebsite.com
-	Connection:close
-	
-	username=Kirk&password=lol123
-	
+    http_header *header = headers;
 
+    fprintf(stderr, "headers sent:\n");
+
+    char *printed = http_header_print(headers);
+
+    fprintf(stderr, "%s\r\n", printed);
+
+    fwrite(printed, strlen(printed), 1, fp);
+    fwrite("\r\n", 2, 1, fp);
+    free(printed);
+}
+
+/**
+ * response body callback
+ * @param chunk
+ * @param chunk_len
+ * @param headers
+ */
+void response_body_cb(const char *chunk, size_t chunk_len, http_header *headers) {
+
+    if (chunk_len > 0) {
+
+        fwrite(chunk, 1, chunk_len, fp);
+
+        http_header *content_type = http_header_get(headers, "Content-Type");
+
+        // if text content, dump to stderr
+        if (content_type != NULL && strstr(content_type->value, "text/") != NULL) {
+
+            fwrite(chunk, chunk_len, 1, stderr);
+        }
+
+        http_header_free(content_type);
+    }
+}
+
+int main(int argc, char *argv[]) {
+
+    if (argc <= 2) {
+
+        fprintf(fp, "Usage: \n$ %s URL DEST_FILE\n", argv[0]);
+        exit(1);
+    }
+
+    char *filename = argc > 2 ? argv[2] : "";
+    fprintf(stderr, "opening %s ...\n", filename);
+
+    http_request *request = http_request_new();
+
+    http_request_option(request, HTTP_OPTION_URL, argv[1], 0);
+    //  http_request_option(request, HTTP_OPTION_METHOD, "POST");
+    //  http_request_option(request, HTTP_OPTION_BODY, "a=1&b=2");
+    http_request_option(request, HTTP_OPTION_REQUEST_TIMEOUT, "5", 0);
+    http_request_option(request, HTTP_OPTION_REQUEST_HEADER_CALLBACK, request_header_cb, 0);
+    http_request_option(request, HTTP_OPTION_RESPONSE_HEADER_CALLBACK, response_header_cb, 0);
+    http_request_option(request, HTTP_OPTION_RESPONSE_BODY_CALLBACK, response_body_cb, 0);
+    http_request_header_set(request, "User-Agent", "Firevox");
+    //  http_request_header_set(request, "Authorization", "Bearer <secret>");
+    http_request_header_add(request, "Accept-Language", "en-US;q=0.6,en;q=0.4");
+
+    fp = fopen(filename, "wb");
+
+    http_response *response = http_request_exec(request);
+
+    fclose(fp);
+
+    http_request_free(request);
+    http_response_free(response);
+
+    return 0;
+}
+```
