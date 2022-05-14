@@ -107,14 +107,7 @@ parsed_url *parse_url(const char *url) {
     if (NULL == purl) {
         return NULL;
     }
-    purl->scheme = NULL;
-    purl->host = NULL;
-    purl->port = NULL;
-    purl->path = NULL;
-    purl->query = NULL;
-    purl->fragment = NULL;
-    purl->username = NULL;
-    purl->password = NULL;
+
     curstr = url;
 
     /*
@@ -296,8 +289,7 @@ parsed_url *parse_url(const char *url) {
     }
 
     /* Get ip */
-    char *ip = hostname_to_ip(purl->host);
-    purl->ip = ip;
+    purl->ip = hostname_to_ip(purl->host);
 
     /* Set uri */
     purl->uri = (char *) url;

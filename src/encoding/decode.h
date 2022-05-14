@@ -6,9 +6,9 @@
 #include "encoding/chunked.h"
 #include "http/struct.h"
 
-http_client_errors http_transfer_decode(http_transfer_encoding *te, int sock, const char *buf, size_t buf_len, size_t offset, http_request *, http_response *);
+http_client_errors http_transfer_decode(http_transfer_encoding *te, int sock, char *buf, size_t buf_len, size_t offset, http_request *, http_response *);
 
-http_client_errors http_transfer_decode(http_transfer_encoding *te, int sock, const char *buf, size_t buf_len, size_t offset, http_request *hreq, http_response *hresp) {
+http_client_errors http_transfer_decode(http_transfer_encoding *te, int sock, char *buf, size_t buf_len, size_t offset, http_request *hreq, http_response *hresp) {
 
     if (te != NULL) {
 
@@ -24,6 +24,7 @@ http_client_errors http_transfer_decode(http_transfer_encoding *te, int sock, co
 
     if (hreq->response_body_cb != NULL) {
 
+        fprintf(stderr, "%s", &buf[offset]);
         hreq->response_body_cb(&buf[offset], buf_len - offset, hresp->headers);
     }
     else {
@@ -33,20 +34,18 @@ http_client_errors http_transfer_decode(http_transfer_encoding *te, int sock, co
         memcpy(hresp->body, &buf[offset], body_len);
     }
 
-
     size_t received_len = 0;
-    char BUF[BUF_READ];
 
-    while ((received_len = recv(sock, BUF, BUF_READ - 1, 0)) > 0) {
+    while ((received_len = recv(sock, (void *) buf, BUF_READ - 1, 0)) > 0) {
 
         if (hreq->response_body_cb != NULL) {
 
-            hreq->response_body_cb(BUF, received_len, hresp->headers);
+            hreq->response_body_cb(buf, received_len, hresp->headers);
         }
         else {
 
             hresp->body = realloc(hresp->body, body_len + received_len + 1);
-            memcpy(&hresp->body[body_len], BUF, received_len);
+            memcpy(&hresp->body[body_len], buf, received_len);
             body_len += received_len;
         }
     }

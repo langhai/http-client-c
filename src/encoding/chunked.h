@@ -7,7 +7,8 @@
 #include "charset/utf8.h"
 
 int http_chunked_transfer_block_info(const char *buf, long buf_len, size_t *offset, size_t *data_len);
-int http_chunked_transfer_decode(int sock, const char *buf, size_t data_len, size_t offset, http_request *, http_response *);
+
+int http_chunked_transfer_decode(int sock, char *buf, size_t data_len, size_t offset, http_request *, http_response *);
 
 /**
  *
@@ -55,7 +56,8 @@ char *u8block_info(char *data, size_t bytes_read, size_t *mb_len) {
     return block;
 }
 
-int http_chunked_transfer_decode(int sock, const char *buf, size_t buf_len, size_t offset, http_request *hreq, http_response *hresp) {
+int http_chunked_transfer_decode(int sock, char *buf, size_t buf_len, size_t offset, http_request *hreq,
+                                 http_response *hresp) {
 
     size_t block_size = 0;
     size_t block_offset = 0;
@@ -67,8 +69,8 @@ int http_chunked_transfer_decode(int sock, const char *buf, size_t buf_len, size
 
     int status = 0;
 
-    char data[BUF_READ];
-    memcpy(data, buf, buf_len);
+//    char data[BUF_READ];
+//    memcpy(data, buf, buf_len);
 
 //    http_header_attribute *charset = NULL;
 //    http_header *header = http_header_get(hresp->headers, "Content-Type");
@@ -104,7 +106,7 @@ int http_chunked_transfer_decode(int sock, const char *buf, size_t buf_len, size
     if (received_len - 1 > offset) {
 
 //        block_info:
-        status = http_chunked_transfer_block_info(&data[offset], buf_len - offset, &block_offset, &block_size);
+        status = http_chunked_transfer_block_info(&buf[offset], buf_len - offset, &block_offset, &block_size);
 
         if (status < 0) {
 
@@ -122,23 +124,19 @@ int http_chunked_transfer_decode(int sock, const char *buf, size_t buf_len, size
             partial_read:
 
             offset += block_offset;
-            mb_str = u8block_info(&data[offset], block_size, &mb_len);
+            mb_str = u8block_info(&buf[offset], block_size, &mb_len);
 
             size_t _len = strlen(mb_str);
 
             if (hreq->response_body_cb != NULL) {
 
                 hreq->response_body_cb(mb_str, _len, hresp->headers);
-            }
-
-            else {
+            } else {
 
                 if (hresp->body == NULL) {
 
                     hresp->body = strdup(mb_str);
-                }
-
-                else {
+                } else {
 
                     hresp->body = (char *) realloc(hresp->body, hresp->body_len + _len + 1);
                     memcpy(&hresp->body[hresp->body_len], mb_str, _len);
@@ -165,7 +163,8 @@ int http_chunked_transfer_decode(int sock, const char *buf, size_t buf_len, size
                 if (block_size == 0) {
 
                     offset += 2;
-                    status = http_chunked_transfer_block_info(&data[offset], received_len - offset, &block_offset, &block_size);
+                    status = http_chunked_transfer_block_info(&buf[offset], received_len - offset, &block_offset,
+                                                              &block_size);
 
                     if (status < 0) {
 
@@ -182,38 +181,23 @@ int http_chunked_transfer_decode(int sock, const char *buf, size_t buf_len, size
                 }
             }
 
-            // completely read data block
-            // fetch next data block
-            // reset offset
-
-//            bool complete = received_len == offset;
-
-            received_len = recv(sock, data, BUF_READ - 1, 0);
+            received_len = recv(sock, (void *) buf, BUF_READ - 1, 0);
 
             offset = 0;
 
             if (received_len > 0) {
 
-//                if (complete) {
-//
-//                    goto block_info;
-//                }
-
-                data[received_len] = '\0';
+                buf[received_len] = '\0';
 
                 goto partial_read;
             }
 
             if (received_len == 0) {
 
-//                hresp->body_len = body_len;
                 return HTTP_CLIENT_ERROR_OK;
             }
 
-//            if (received_len < 0) {
-
-                return HTTP_CLIENT_ERROR_RECV;
-//            }
+            return HTTP_CLIENT_ERROR_RECV;
         }
     }
 
