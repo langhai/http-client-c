@@ -3,7 +3,9 @@
 //
 #include "http/client.h"
 
-FILE *fp;
+FILE *fp = NULL;
+char *charset = NULL;
+char *filename = NULL;
 
 /**
  * response header callback
@@ -11,16 +13,36 @@ FILE *fp;
  */
 void response_header_cb(http_header *headers) {
 
-    http_header *header = headers;
+    if (fp == NULL) {
+
+        // check content charset
+//        http_header *header = http_header_get(headers, "Content-Type");
+//
+//        if (header != NULL) {
+//
+//            if (header->attribute != NULL) {
+//
+//                http_header_attribute *cs = http_header_attribute_get(header->attribute, "charset");
+//
+//                if (cs != NULL) {
+//
+//                    fprintf(stderr, "\n\ncharset = '%s'\n\n", cs->value);
+//                    charset = strdup(cs->value);
+//                }
+//            }
+//
+//            http_header_free(header);
+//            header = NULL;
+//        }
+
+        fp = fopen(filename, "wb");
+    }
 
     fprintf(stderr, "headers received:\n");
 
     char *printed = http_header_print(headers);
 
     fprintf(stderr, "%s\r\n", printed);
-
-//    fwrite(printed, strlen(printed), 1, fp);
-//    fwrite("\r\n", 2, 1, fp);
     free(printed);
 }
 
@@ -30,16 +52,11 @@ void response_header_cb(http_header *headers) {
  */
 void request_header_cb(http_header *headers) {
 
-    http_header *header = headers;
-
     fprintf(stderr, "headers sent:\n");
 
     char *printed = http_header_print(headers);
 
     fprintf(stderr, "%s\r\n", printed);
-
-//    fwrite(printed, strlen(printed), 1, fp);
-//    fwrite("\r\n", 2, 1, fp);
     free(printed);
 }
 
@@ -49,7 +66,7 @@ void request_header_cb(http_header *headers) {
  * @param chunk_len
  * @param headers
  */
-void response_body_cb(const char *chunk, size_t chunk_len, http_header *headers) {
+void response_body_cb(const unsigned char *chunk, size_t chunk_len, http_header *headers) {
 
     if (chunk_len > 0) {
 
@@ -71,11 +88,11 @@ int main(int argc, char *argv[]) {
 
     if (argc <= 2) {
 
-        fprintf(fp, "Usage: \n$ %s URL DEST_FILE\n", argv[0]);
+        fprintf(stderr, "Usage: \n$ %s URL DEST_FILE\n", argv[0]);
         exit(1);
     }
 
-    char *filename = argc > 2 ? argv[2] : "";
+    filename = argc > 2 ? argv[2] : "";
     fprintf(stderr, "opening %s ...\n", filename);
 
     http_request *request = http_request_new();
@@ -89,13 +106,19 @@ int main(int argc, char *argv[]) {
     http_request_option(request, HTTP_OPTION_RESPONSE_BODY_CALLBACK, response_body_cb, 0);
     http_request_header_set(request, "User-Agent", "Bluefox");
 //    http_request_header_set(request, "Authorization", "Bearer <secret>");
-//    http_request_header_add(request, "Accept-Language", "en-US;q=0.6,en;q=0.4");
-
-    fp = fopen(filename, "wb");
+//    http_request_header_add(request, "Accept-Language", "zh-CN;q=0.9;en-US;q=0.6,en;q=0.4");
 
     http_response *response = http_request_exec(request);
 
-    fclose(fp);
+    if (fp != NULL) {
+
+        fclose(fp);
+    }
+
+    if (charset != NULL) {
+
+        free(charset);
+    }
 
     http_request_free(request);
     http_response_free(response);

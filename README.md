@@ -12,6 +12,7 @@ Basic Usage
 ===============
 
 ```c
+    #include "http/client.h"
 
     http_request *request = http_request_new();
 
@@ -213,7 +214,7 @@ int main(int argc, char *argv[]) {
 
     if (argc <= 2) {
 
-        fprintf(fp, "Usage: \n$ %s URL DEST_FILE\n", argv[0]);
+        fprintf(stderr, "Usage: \n$ %s URL DEST_FILE\n", argv[0]);
         exit(1);
     }
 

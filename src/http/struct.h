@@ -6,14 +6,14 @@
 #define HTTP_CLIENT_C_HTTP_STRUCT_H
 
 #define BUF_READ 8192
-#define HTTP_CLIENT_C_HTTP_MAX_REDIRECT 10;
+#define HTTP_CLIENT_C_HTTP_MAX_REDIRECT 50;
 
 #include "http/header.h"
 
 typedef struct http_request http_request;
 
 typedef void (http_header_cb_ptr)(http_header *);
-typedef void (http_response_body_cb_ptr)(const char*, size_t, http_header *);
+typedef void (http_response_body_cb_ptr)(const unsigned char*, size_t, http_header *);
 
 typedef enum {
     HTTP_OPTION_URL,

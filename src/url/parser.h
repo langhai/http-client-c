@@ -34,7 +34,7 @@
 /*
 	Represents an url
 */
-typedef struct parsed_url {
+typedef struct http_url {
     char *uri;                    /* mandatory */
     char *scheme;               /* mandatory */
     char *host;                 /* mandatory */
@@ -45,12 +45,12 @@ typedef struct parsed_url {
     char *fragment;             /* optional */
     char *username;             /* optional */
     char *password;             /* optional */
-} parsed_url;
+} http_url;
 
 /*
 	Free memory of parsed url
 */
-void parsed_url_free(parsed_url *purl) {
+void http_url_free(http_url *purl) {
     if (NULL != purl) {
         if (NULL != purl->scheme) free(purl->scheme);
         if (NULL != purl->host) free(purl->host);
@@ -68,7 +68,7 @@ void parsed_url_free(parsed_url *purl) {
 	Retrieves the IP adress of a hostname
 */
 char *hostname_to_ip(char *hostname) {
-    char *ip = "0.0.0.0";
+//    char *ip = "0.0.0.0";
     struct hostent *h;
     if ((h = gethostbyname(hostname)) == NULL) {
         printf("gethostbyname");
@@ -85,15 +85,15 @@ int is_scheme_char(int c) {
 }
 
 /*
-	Parses a specified URL and returns the structure named 'parsed_url'
+	Parses a specified URL and returns the structure named 'http_url'
 	Implented according to:
 	RFC 1738 - http://www.ietf.org/rfc/rfc1738.txt
 	RFC 3986 -  http://www.ietf.org/rfc/rfc3986.txt
 */
-parsed_url *parse_url(const char *url) {
+http_url *http_url_parse(const char *url) {
 
     /* Define variable */
-    parsed_url *purl;
+    http_url *purl;
     const char *tmpstr;
     const char *curstr;
     size_t len;
@@ -102,19 +102,12 @@ parsed_url *parse_url(const char *url) {
     int bracket_flag;
 
     /* Allocate the parsed url storage */
-    purl = (parsed_url *) calloc(1, sizeof(parsed_url));
+    purl = (http_url *) calloc(1, sizeof(http_url));
 
     if (NULL == purl) {
         return NULL;
     }
-    purl->scheme = NULL;
-    purl->host = NULL;
-    purl->port = NULL;
-    purl->path = NULL;
-    purl->query = NULL;
-    purl->fragment = NULL;
-    purl->username = NULL;
-    purl->password = NULL;
+
     curstr = url;
 
     /*
@@ -125,7 +118,7 @@ parsed_url *parse_url(const char *url) {
     /* Read scheme */
     tmpstr = strchr(curstr, ':');
     if (NULL == tmpstr) {
-        parsed_url_free(purl);
+        http_url_free(purl);
         fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
 
         return NULL;
@@ -138,7 +131,7 @@ parsed_url *parse_url(const char *url) {
     for (i = 0; i < len; i++) {
         if (is_scheme_char(curstr[i]) == 0) {
             /* Invalid format */
-            parsed_url_free(purl);
+            http_url_free(purl);
             fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
@@ -146,7 +139,7 @@ parsed_url *parse_url(const char *url) {
     /* Copy the scheme to the storage */
     purl->scheme = (char *) malloc(sizeof(char) * (len + 1));
     if (NULL == purl->scheme) {
-        parsed_url_free(purl);
+        http_url_free(purl);
         fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
 
         return NULL;
@@ -171,7 +164,7 @@ parsed_url *parse_url(const char *url) {
     /* Eat "//" */
     for (i = 0; i < 2; i++) {
         if ('/' != *curstr) {
-            parsed_url_free(purl);
+            http_url_free(purl);
             fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
@@ -204,7 +197,7 @@ parsed_url *parse_url(const char *url) {
         len = tmpstr - curstr;
         purl->username = (char *) malloc(sizeof(char) * (len + 1));
         if (NULL == purl->username) {
-            parsed_url_free(purl);
+            http_url_free(purl);
             fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
@@ -225,7 +218,7 @@ parsed_url *parse_url(const char *url) {
             len = tmpstr - curstr;
             purl->password = (char *) malloc(sizeof(char) * (len + 1));
             if (NULL == purl->password) {
-                parsed_url_free(purl);
+                http_url_free(purl);
                 fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
                 return NULL;
             }
@@ -235,7 +228,7 @@ parsed_url *parse_url(const char *url) {
         }
         /* Skip '@' */
         if ('@' != *curstr) {
-            parsed_url_free(purl);
+            http_url_free(purl);
             fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
@@ -263,7 +256,7 @@ parsed_url *parse_url(const char *url) {
     len = tmpstr - curstr;
     purl->host = (char *) malloc(sizeof(char) * (len + 1));
     if (NULL == purl->host || len <= 0) {
-        parsed_url_free(purl);
+        http_url_free(purl);
         fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
         return NULL;
     }
@@ -282,7 +275,7 @@ parsed_url *parse_url(const char *url) {
         len = tmpstr - curstr;
         purl->port = (char *) malloc(sizeof(char) * (len + 1));
         if (NULL == purl->port) {
-            parsed_url_free(purl);
+            http_url_free(purl);
             fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
@@ -296,8 +289,7 @@ parsed_url *parse_url(const char *url) {
     }
 
     /* Get ip */
-    char *ip = hostname_to_ip(purl->host);
-    purl->ip = ip;
+    purl->ip = hostname_to_ip(purl->host);
 
     /* Set uri */
     purl->uri = (char *) url;
@@ -309,7 +301,7 @@ parsed_url *parse_url(const char *url) {
 
     /* Skip '/' */
     if ('/' != *curstr) {
-        parsed_url_free(purl);
+        http_url_free(purl);
         fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
         return NULL;
     }
@@ -323,7 +315,7 @@ parsed_url *parse_url(const char *url) {
     len = tmpstr - curstr;
     purl->path = (char *) malloc(sizeof(char) * (len + 1));
     if (NULL == purl->path) {
-        parsed_url_free(purl);
+        http_url_free(purl);
         fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
         return NULL;
     }
@@ -343,7 +335,7 @@ parsed_url *parse_url(const char *url) {
         len = tmpstr - curstr;
         purl->query = (char *) malloc(sizeof(char) * (len + 1));
         if (NULL == purl->query) {
-            parsed_url_free(purl);
+            http_url_free(purl);
             fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }
@@ -364,7 +356,7 @@ parsed_url *parse_url(const char *url) {
         len = tmpstr - curstr;
         purl->fragment = (char *) malloc(sizeof(char) * (len + 1));
         if (NULL == purl->fragment) {
-            parsed_url_free(purl);
+            http_url_free(purl);
             fprintf(stderr, "Error on line %d (%s)\n", __LINE__, __FILE__);
             return NULL;
         }

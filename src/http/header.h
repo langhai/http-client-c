@@ -33,11 +33,12 @@ http_header_attribute *http_header_attribute_new();
 
 http_header *http_header_clone(http_header *);
 http_header_attribute *http_header_attribute_clone(http_header_attribute *);
+http_header_attribute *http_header_attribute_deep_clone(http_header_attribute *);
 
 int http_header_exists(http_header *header, const char *name);
 
 http_header *http_header_get(http_header *header, const char *name);
-http_header_attribute *http_header_attribute_get(http_header *header, const char *name);
+http_header_attribute *http_header_attribute_get(http_header_attribute *, const char *);
 
 void http_header_set_name(http_header *header, char *name);
 
@@ -108,6 +109,36 @@ http_header_attribute *http_header_attribute_clone(http_header_attribute *attr) 
     return clone;
 }
 
+http_header_attribute *http_header_attribute_deep_clone(http_header_attribute *attr) {
+
+    http_header_attribute *tmp, *curr = attr;
+    http_header_attribute *clone = NULL;
+
+    while (curr != NULL) {
+
+        if (clone == NULL) {
+
+            clone = tmp = http_header_attribute_new();
+        } else {
+
+            tmp->next = http_header_attribute_new();
+            tmp = tmp->next;
+        }
+
+        tmp->type = curr->type;
+        tmp->name = strdup(curr->name);
+
+        if (curr->value != NULL) {
+
+            tmp->value = strdup(curr->value);
+        }
+
+        curr = curr->next;
+    }
+
+    return clone;
+}
+
 int http_header_exists(http_header *header, const char *name) {
 
     http_header *head = header;
@@ -129,7 +160,7 @@ http_header *http_header_get(http_header *header, const char *name) {
 
     http_header *head = header;
     http_header *result = NULL;
-    http_header *tmp, *tmp2;
+    http_header *tmp;
 
     while (head != NULL) {
 
@@ -137,21 +168,19 @@ http_header *http_header_get(http_header *header, const char *name) {
 
             if (result == NULL) {
 
-                result = http_header_new();
-
-                http_header_set_name(result, head->name);
-                http_header_set_value(result, head->value);
-
-                tmp = result;
+                tmp = result = http_header_new();
             } else {
 
-                tmp2 = http_header_new();
+                tmp->next = http_header_new();
+                tmp = tmp->next;
+            }
 
-                http_header_set_name(tmp2, head->name);
-                http_header_set_value(tmp2, head->value);
+            http_header_set_name(tmp, head->name);
+            http_header_set_value(tmp, head->value);
 
-                tmp->next = tmp2;
-                tmp = tmp2;
+            if (head->attribute != NULL) {
+
+                tmp->attribute = http_header_attribute_deep_clone(head->attribute);
             }
         }
 
@@ -161,18 +190,18 @@ http_header *http_header_get(http_header *header, const char *name) {
     return result;
 }
 
-http_header_attribute *http_header_attribute_get(http_header *header, const char *name) {
+http_header_attribute *http_header_attribute_get(http_header_attribute *attribute, const char *name) {
 
-    http_header_attribute *head = header->attribute;
+    http_header_attribute *attr = attribute;
 
-    while (head != NULL) {
+    while (attr != NULL) {
 
-        if (strcasecmp(head->name, name) == 0) {
+        if (strcasecmp(attr->name, name) == 0) {
 
-            return http_header_attribute_clone(head);
+            return http_header_attribute_clone(attr);
         }
 
-        head = head->next;
+        attr = attr->next;
     }
 
     return NULL;
@@ -298,7 +327,6 @@ http_header *http_header_parse(const char *http_headers, size_t *len) {
 }
 
 http_header_attribute *http_header_attribute_parse(const char *http_headers) {
-
 
     http_header_attribute *attr = NULL;
     http_header_attribute *root = NULL;

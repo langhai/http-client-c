@@ -72,10 +72,10 @@ void http_request_header_unset(http_request *hreq, const char *name);
 
 http_response *http_request_exec(http_request *hreq);
 
-char *http_request_serialize(http_header *headers, const char *method, parsed_url *purl, char *body,
+char *http_request_serialize(http_header *headers, const char *method, http_url *purl, char *body,
                              size_t body_len, size_t *len);
 
-int http_request_send(http_response *hresp, http_request *hreq, char *request, size_t request_len, parsed_url *purl);
+int http_request_send(http_response *hresp, http_request *hreq, char *request, size_t request_len, http_url *purl);
 
 void http_request_option(http_request *hreq, http_option option, const void *val, size_t len);
 
@@ -176,6 +176,11 @@ http_response *http_request_exec(http_request *hreq) {
 
     const char *request_uri = hreq->request_uri;
 
+    if (request_uri == NULL) {
+
+        return NULL;
+    }
+
     if (hreq->max_redirect == 0) {
 
         hreq->max_redirect = HTTP_CLIENT_C_HTTP_MAX_REDIRECT;
@@ -189,12 +194,15 @@ http_response *http_request_exec(http_request *hreq) {
         str_to_upper(hreq->method, strlen(hreq->method));
     }
 
-    if (request_uri == NULL) {
+    if (strcasecmp(hreq->method, "GET") == 0 && hreq->body_len > 0) {
 
-        return NULL;
+        fprintf(stderr, "converting HTTP method from GET tp POST");
+
+        free(hreq->method);
+        hreq->method = strdup("POST");
     }
 
-    parsed_url *purl = parse_url(hreq->request_uri);
+    http_url *purl = http_url_parse(hreq->request_uri);
 
     if (purl == NULL) {
 
@@ -219,7 +227,7 @@ http_response *http_request_exec(http_request *hreq) {
 
     if (!http_header_exists(hreq->headers, "Accept-Encoding")) {
 
-        // disable encoding pleas please
+        // disable encoding please please
         http_request_header_set(hreq, "Accept-Encoding", "identity");
     }
 
@@ -235,7 +243,7 @@ http_response *http_request_exec(http_request *hreq) {
     if (hresp == NULL) {
 
         printf("Unable to allocate memory for HTTP response.");
-        parsed_url_free(purl);
+        http_url_free(purl);
         return NULL;
     }
 
@@ -247,7 +255,7 @@ http_response *http_request_exec(http_request *hreq) {
 
     do {
 
-        if(strcasecmp(purl->scheme, "http") != 0) {
+        if (strcasecmp(purl->scheme, "http") != 0) {
 
             if (request != NULL) {
 
@@ -255,14 +263,14 @@ http_response *http_request_exec(http_request *hreq) {
             }
 
             fprintf(stderr, "error: %s: '%s'\n", http_client_error(HTTP_CLIENT_PROTO), purl->scheme);
-            parsed_url_free(purl);
+            http_url_free(purl);
             return NULL;
         }
 
         if (request_len < 0) {
 
             free(request);
-            parsed_url_free(purl);
+            http_url_free(purl);
 
             fprintf(stderr, "error: %s\n", http_client_error(request_len));
             return NULL;
@@ -284,13 +292,12 @@ http_response *http_request_exec(http_request *hreq) {
                     fprintf(stderr, "error: %s: '%s'\n", http_client_error(result), te->value);
                     http_header_free(te);
                 }
-            }
-            else {
+            } else {
 
                 fprintf(stderr, "error: %s\n", http_client_error(result));
             }
 
-            parsed_url_free(purl);
+            http_url_free(purl);
             http_response_free(hresp);
 
             return NULL;
@@ -308,7 +315,7 @@ http_response *http_request_exec(http_request *hreq) {
         http_header *location = http_header_get(hresp->headers, "Location");
 
         hresp->redirect_uri = strdup(location->value);
-        purl = parse_url(location->value);
+        purl = http_url_parse(location->value);
         http_header_free(hresp->headers);
         hresp->headers = NULL;
 
@@ -342,13 +349,13 @@ http_response *http_request_exec(http_request *hreq) {
 
     } while (hreq->max_redirect > hresp->redirect_count);
 
-    parsed_url_free(purl);
+    http_url_free(purl);
 
     /* Return response */
     return hresp;
 }
 
-char *http_request_serialize(http_header *headers, const char *method, parsed_url *purl, char *body,
+char *http_request_serialize(http_header *headers, const char *method, http_url *purl, char *body,
                              size_t body_len, size_t *len) {
 
     if (purl->username != NULL) {
@@ -431,7 +438,7 @@ char *http_request_serialize(http_header *headers, const char *method, parsed_ur
     return buff;
 }
 
-http_client_errors http_request_send(http_response *hresp, http_request *hreq, char *request, size_t request_len, parsed_url *purl) {
+http_client_errors http_request_send(http_response *hresp, http_request *hreq, char *request, size_t request_len, http_url *purl) {
 
     /* Declare variable */
     int sock;
@@ -442,9 +449,9 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
 
     /* Create TCP socket */
     if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0
-        || setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, hreq->request_timeout, sizeof *hreq->request_timeout) < 0
-        || setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, hreq->request_timeout, sizeof *hreq->request_timeout) < 0
-        ) {
+        || setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, hreq->request_timeout, sizeof *hreq->request_timeout) < 0
+        || setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, hreq->request_timeout, sizeof *hreq->request_timeout) < 0
+            ) {
 
         error_reason = HTTP_CLIENT_ERROR_CONNECT;
         goto exit;
@@ -482,6 +489,7 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
     /* Send headers to server */
     size_t sent = 0;
     while (sent < request_len) {
+
         tmpres = send(sock, &request[sent], request_len - sent, 0);
         if (tmpres == -1) {
 
@@ -496,7 +504,7 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
 
     ssize_t received_len;
 
-    if ((received_len = recv(sock, BUF, BUF_READ - 1, 0)) > 0) {
+    if ((received_len = recv(sock, (void *) BUF, BUF_READ - 1, 0)) > 0) {
 
         BUF[received_len] = '\0';
 
@@ -534,18 +542,16 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
                 goto exit;
             }
 
-//            if (hreq->response_body_cb != NULL) {
+            http_header *teh = http_header_get(hresp->headers, "Transfer-Encoding");
 
-                http_header *teh = http_header_get(hresp->headers, "Transfer-Encoding");
+            if (teh != NULL) {
 
-                if (teh != NULL) {
+                te = http_transfer_encoding_parse(teh->value);
+            }
 
-                    te = http_transfer_encoding_parse(teh->value);
-                }
-
-                error_reason = http_transfer_decode(te, sock, BUF, received_len, (body_end - BUF) + 4, hreq, hresp);
-                goto exit;
-//            }
+            error_reason = http_transfer_decode(te, sock, (char *) BUF, received_len, (body_end - BUF) + 4, hreq,
+                                                hresp);
+            goto exit;
         }
     }
 
@@ -579,12 +585,12 @@ http_client_errors http_request_send(http_response *hresp, http_request *hreq, c
     }
 #endif
     return error_reason;
-
 }
 
 void http_request_option(http_request *hreq, http_option option, const void *val, size_t len) {
 
     http_header *header;
+
     switch (option) {
 
         case HTTP_OPTION_URL:
