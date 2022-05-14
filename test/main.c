@@ -66,7 +66,7 @@ void request_header_cb(http_header *headers) {
  * @param chunk_len
  * @param headers
  */
-void response_body_cb(const char *chunk, size_t chunk_len, http_header *headers) {
+void response_body_cb(const unsigned char *chunk, size_t chunk_len, http_header *headers) {
 
     if (chunk_len > 0) {
 

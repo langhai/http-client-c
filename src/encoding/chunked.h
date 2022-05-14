@@ -10,6 +10,8 @@ int http_chunked_transfer_block_info(const char *buf, long buf_len, size_t *offs
 
 int http_chunked_transfer_decode(int sock, char *buf, size_t data_len, size_t offset, http_request *, http_response *);
 
+void handle_response_body(const http_request *hreq, http_response *hresp, const unsigned char *mb_str, size_t _len);
+
 /**
  *
  * @param buf buffer
@@ -67,45 +69,10 @@ int http_chunked_transfer_decode(int sock, char *buf, size_t buf_len, size_t off
     char *mb_str = NULL;
     ssize_t received_len = buf_len;
 
-    int status = 0;
-
-//    char data[BUF_READ];
-//    memcpy(data, buf, buf_len);
-
-//    http_header_attribute *charset = NULL;
-//    http_header *header = http_header_get(hresp->headers, "Content-Type");
-//
-//    if (header != NULL) {
-//
-//        char *print = http_header_print(header);
-//
-//        printf("content-type: %s", print);
-//        charset = http_header_attribute_get(header, "charset");
-//
-//        free(print);
-//        print = NULL;
-//
-//        if (charset != NULL) {
-//
-//            print = http_header_attribute_print(charset);
-//
-//
-//            fprintf(stderr, "charset %s\n\n\n", print);
-//            free(print);
-//            free(charset);
-//        }
-//
-//        free(header);
-//        header = NULL;
-//    }
-//
-//    return HTTP_CLIENT_ERROR_OK;
-
-
+    int status;
 
     if (received_len - 1 > offset) {
 
-//        block_info:
         status = http_chunked_transfer_block_info(&buf[offset], buf_len - offset, &block_offset, &block_size);
 
         if (status < 0) {
@@ -115,7 +82,6 @@ int http_chunked_transfer_decode(int sock, char *buf, size_t buf_len, size_t off
 
         if (block_size == 0) {
 
-//            hresp->body_len = body_len;
             return HTTP_CLIENT_ERROR_OK;
         }
 
@@ -128,22 +94,24 @@ int http_chunked_transfer_decode(int sock, char *buf, size_t buf_len, size_t off
 
             size_t _len = strlen(mb_str);
 
-            if (hreq->response_body_cb != NULL) {
+            if (_len == 0) {
 
-                hreq->response_body_cb(mb_str, _len, hresp->headers);
-            } else {
+                char *end = strstr(&buf[offset], "\r\n");
+                
+                if (end != NULL) {
 
-                if (hresp->body == NULL) {
-
-                    hresp->body = strdup(mb_str);
-                } else {
-
-                    hresp->body = (char *) realloc(hresp->body, hresp->body_len + _len + 1);
-                    memcpy(&hresp->body[hresp->body_len], mb_str, _len);
-
-                    hresp->body[hresp->body_len + _len] = '\0';
+                    block_size = end - &buf[offset];
+                    handle_response_body(hreq, hresp, &buf[offset], block_size);
+                    
+                    offset += block_size;
+                    goto block_info;
                 }
+
+                handle_response_body(hreq, hresp, &buf[offset], received_len - offset);
+                return HTTP_CLIENT_ERROR_OK;
             }
+
+            handle_response_body(hreq, hresp, mb_str, _len);
 
             hresp->body_len += _len;
             offset += _len;
@@ -162,6 +130,7 @@ int http_chunked_transfer_decode(int sock, char *buf, size_t buf_len, size_t off
 
                 if (block_size == 0) {
 
+                    block_info:
                     offset += 2;
                     status = http_chunked_transfer_block_info(&buf[offset], received_len - offset, &block_offset,
                                                               &block_size);
@@ -173,7 +142,6 @@ int http_chunked_transfer_decode(int sock, char *buf, size_t buf_len, size_t off
 
                     if (block_size == 0) {
 
-//                        hresp->body_len = body_len;
                         return HTTP_CLIENT_ERROR_OK;
                     }
 
@@ -182,7 +150,6 @@ int http_chunked_transfer_decode(int sock, char *buf, size_t buf_len, size_t off
             }
 
             received_len = recv(sock, (void *) buf, BUF_READ - 1, 0);
-
             offset = 0;
 
             if (received_len > 0) {
@@ -202,6 +169,25 @@ int http_chunked_transfer_decode(int sock, char *buf, size_t buf_len, size_t off
     }
 
     return HTTP_CLIENT_ERROR_OK;
+}
+
+void handle_response_body(const http_request *hreq, http_response *hresp, const unsigned char *mb_str, size_t _len) {
+    if (hreq->response_body_cb != NULL) {
+
+        hreq->response_body_cb(mb_str, _len, hresp->headers);
+    } else {
+
+        if (hresp->body == NULL) {
+
+            hresp->body = strdup(mb_str);
+        } else {
+
+            hresp->body = (char *) realloc(hresp->body, hresp->body_len + _len + 1);
+            memcpy(&hresp->body[hresp->body_len], mb_str, _len);
+
+            hresp->body[hresp->body_len + _len] = '\0';
+        }
+    }
 }
 
 
